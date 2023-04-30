@@ -140,16 +140,23 @@
     <ClInclude Include="menu.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resources\images\background1.png" />
+    <Image Include="resources\images\background2.png" />
+    <Image Include="resources\images\background3.png" />
+    <Image Include="resources\images\bbackground.png" />
     <Image Include="resources\images\CharAssets.png" />
     <Image Include="resources\images\ele.png" />
+    <Image Include="resources\images\fire_door1.png" />
     <Image Include="resources\images\fire.png" />
     <Image Include="resources\images\fire2.png" />
     <Image Include="resources\images\fire3.png" />
     <Image Include="resources\images\fire5.png" />
     <Image Include="resources\images\flake.png" />
+    <Image Include="resources\images\fontlarge.png" />
     <Image Include="resources\images\menu_image.jpg" />
     <Image Include="resources\images\rope.png" />
     <Image Include="resources\images\rope1.png" />
+    <Image Include="resources\images\water_door1.png" />
     <Image Include="resources\images\water.png" />
     <Image Include="resources\images\wire.png" />
     <Image Include="resources\images\wlake.png" />

@@ -73,6 +73,27 @@
     <Image Include="resources\images\wlake.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="resources\images\background1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\background2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\background3.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\bbackground.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\fire_door1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\fontlarge.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\water_door1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="resources\fonts\Font1.ttf">

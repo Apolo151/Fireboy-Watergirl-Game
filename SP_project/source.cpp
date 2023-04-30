@@ -14,33 +14,45 @@ void score(Sprite Red[], Sprite Blue[], int& Sc, Text& Scboard);
 void create_characters();
 void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/);
 void setup_env_and_lakes();
-void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]); 
+void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]);
 void deal_with_interactions();
-void background(RenderWindow& window);
+void setup_background(RenderWindow& window);
+int animate_func();
 
 /* Declare global variables*/
 Font ScoreFont;
 Text ScoreBoard;
-int Score = 0;
+int Score = 0, waterdoor = 3, firedoor = 3;
 Music music;
 Sprite Fireboy, Watergirl, FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
 Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, WaterLakeTexture, WireTexture, RopeTexture;
+Texture tg, tg2, wdoor, fdoor, tback, tbback;
+Sprite swdoor, sfdoor, sback, sbback;
+VertexArray f1(sf::TriangleStrip, 9), f2(sf::TriangleStrip, 8), f3(sf::TriangleStrip, 4),
+g1(sf::TriangleStrip, 4), g2(sf::TriangleStrip, 4), g3(sf::TriangleStrip, 4), g4(sf::TriangleStrip, 4),
+block1(sf::TriangleStrip, 5), block2(sf::TriangleStrip, 4), block3(sf::TriangleStrip, 8);
 
+pair<int, int> WINDOW_DIMENSIONS = { 1280, 900 };
+///
+int row1_B = 10, row2_B = 20, StopRow_B = 10;
+double jumpV_B = 0; bool isgrounded_B = false;
+int row1_G = 22, row2_G = 5, StopRow_G = 20;
+double jumpV_G = 0; bool isgrounded_G = false;
 
+// for making rectangle for jumping on it
+RectangleShape rec1(sf::Vector2f(300.f, 35.f));
+RectangleShape rect(Vector2f(1500, 50));
 
-
-int GamePlay(RenderWindow& window);
-
-
+/*--------------------------*/
 
 int main()
 {
-	//make a main window
-	RenderWindow window(VideoMode(950, 750), "Fireboy & watergirl", Style::Default);
+	//make a main menu window (old (950, 750))
+	RenderWindow window(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Fireboy & watergirl", Style::Default);
 	Menu menu(window.getSize().x, window.getSize().y);
-	//set background
+	//set background for main menu
 	RectangleShape backg;
-	backg.setSize(Vector2f(950, 750));
+	backg.setSize(Vector2f(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second));
 	Texture Maintexture;
 	Maintexture.loadFromFile(RESOURCES+"images/menu_image.jpg");
 	backg.setTexture(&Maintexture);
@@ -69,13 +81,13 @@ int main()
 				}
 				if (event.key.code == Keyboard::Enter)
 				{	
-					//RenderWindow SETTINGS(VideoMode(950, 750), "Settings");
 					int x = menu.pressed();
+					// If Player Choose play
 					if (x == 0)
 					{
 						Score = 0;
 						// Create Game window
-						RenderWindow PLAY(VideoMode(1280, 720), "Game");
+						RenderWindow PLAY(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Game");
 						PLAY.setFramerateLimit(30);
 
 						/*--Setup stuff before going into game loop--*/
@@ -86,109 +98,19 @@ int main()
 						setup_env_and_lakes();
 						// Setup Characters texture
 						create_characters();
-						// Setup Stuff for animation
-						int row1_B = 10, row2_B = 20, StopRow_B = 10;
-						double jumpV_B = 0; bool isgrounded_B = false;
-						int row1_G = 22, row2_G = 5, StopRow_G = 20;
-						double jumpV_G = 0; bool isgrounded_G = false;
-						// for making rectangle for jumping on it
-						RectangleShape rect(Vector2f(1500, 50));
-						rect.setPosition(0, 700);
+						// Setup the background
+						setup_background(PLAY);
 						/*-------------------------------------------*/
 						while (PLAY.isOpen()) {
-							// setup animation
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
 							deal_with_interactions();
-
-							// fireboy controls :
-							if (Keyboard::isKeyPressed(Keyboard::Key::Right))
-							{
-								Fireboy.move(10, 0);
-								Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
-								row1_B += 80;
-								row1_B %= 320;
-							}
-
-
-							else if (Keyboard::isKeyPressed(Keyboard::Key::Left))
-							{
-								Fireboy.move(-10, 0);
-								Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
-								row2_B += 80;
-								row2_B %= 320;
-							}
-
-							else
-							{
-								Fireboy.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
-								StopRow_B += 80;
-								StopRow_B %= 400;
-							}
-
-							// wategirl controls :
-
-							if (Keyboard::isKeyPressed(Keyboard::Key::A))
-							{
-								Watergirl.move(-10, 0);
-								Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
-								row1_G += 100;
-								row1_G %= 400;
-							}
-
-							else if (Keyboard::isKeyPressed(Keyboard::Key::D))
-							{
-								Watergirl.move(10, 0);
-								Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
-								row2_G += 100;
-								row2_G %= 400;
-							}
-							else
-							{
-								Watergirl.setTextureRect(IntRect(StopRow_G, 472, 56, 86));
-								StopRow_G += 80;
-								StopRow_G %= 320;
-							}
-
-							// fire boy jumping code
-
-							if (rect.getGlobalBounds().intersects(Fireboy.getGlobalBounds()))
-							{
-								isgrounded_B = true;
-								jumpV_B = 0;
-
-								if (Keyboard::isKeyPressed(Keyboard::Key::Up))
-								{
-									jumpV_B = 20;
-								}
-							}
-							else
-							{
-								isgrounded_B = false;
-								jumpV_B -= 1.5;
-							}
-
-							// water girl jumping code 
-
-							if (rect.getGlobalBounds().intersects(Watergirl.getGlobalBounds()))
-							{
-								isgrounded_G = true;
-								jumpV_G = 0;
-
-								if (Keyboard::isKeyPressed(Keyboard::Key::W))
-								{
-									jumpV_G = 20;
-								}
-							}
-							else
-							{
-								isgrounded_G = false;
-								jumpV_G -= 1.5;
-							}
-
+							// character movement and animations function
+							animate_func();
 							//
-							PLAY.draw(rect);	
+							PLAY.clear();
 							draw_all(PLAY, red_diamonds, blue_diamonds);
+							//
 							Fireboy.move(0, -jumpV_B);
 							Watergirl.move(0, -jumpV_G);
 							PLAY.display();
@@ -224,14 +146,6 @@ int main()
 								{
 									SETTINGS.close();
 								}
-								/*if (aevent.type == Event::KeyPressed)
-								{
-									if (aevent.key.code == Keyboard::Escape)
-									{
-										PLAY.close();
-									}
-								}
-								*/
 							}
 							//PLAY.close();
 							SETTINGS.clear();
@@ -254,16 +168,7 @@ int main()
 	return 0;
 }
 
-int GamePlay(RenderWindow& PLAY){
-
-	while (PLAY.isOpen())
-	{
-		
-		
-	}
-	return 0;
-}
-
+/* Create the two characters */
 void create_characters() {
 	// for charachter fireboy
 	
@@ -283,26 +188,20 @@ void create_characters() {
 	return;
 }
 
-void background(RenderWindow& window) {
-	Texture tbback;
-	tbback.loadFromFile("bbackground.png");
+/* Sets up background*/
+void setup_background(RenderWindow& window) {
+	tbback.loadFromFile(RESOURCES+"images/bbackground.png");
 	tbback.setRepeated(true);
 
-	Sprite sbback;
 	sbback.setTexture(tbback);
 	sbback.setTextureRect({ 0, 0,1280, 720 });
 
-	Texture tback;
-	tback.loadFromFile("background2.png");
+	tback.loadFromFile(RESOURCES + "images/background2.png");
 	tback.setRepeated(true);
 
-	Sprite sback;
 	sback.setTexture(tback);
 	sback.setTextureRect({ 0, 0,1280, 720 });
 
-
-
-	sf::VertexArray f1(sf::TriangleStrip, 9);
 	f1[0].position = sf::Vector2f(30.f, 425.f);
 	f1[1].position = sf::Vector2f(30.f, 450.f);
 	f1[2].position = sf::Vector2f(470.f, 425.f);
@@ -323,7 +222,6 @@ void background(RenderWindow& window) {
 	f1[7].texCoords = sf::Vector2f(645.f, 525.f);
 	f1[8].texCoords = sf::Vector2f(1090.f, 525.f);
 
-	sf::VertexArray f2(sf::TriangleStrip, 8);
 	f2[0].position = sf::Vector2f(175.f, 310.f);
 	f2[1].position = sf::Vector2f(175.f, 340.f);
 	f2[2].position = sf::Vector2f(580.f, 310.f);
@@ -342,7 +240,6 @@ void background(RenderWindow& window) {
 	f2[6].texCoords = sf::Vector2f(1280.f, 340.f);
 	f2[7].texCoords = sf::Vector2f(1280.f, 370.f);
 
-	sf::VertexArray f3(sf::TriangleStrip, 4);
 	f3[0].position = sf::Vector2f(29.f, 130.f);
 	f3[1].position = sf::Vector2f(29.f, 230.f);
 	f3[2].position = sf::Vector2f(230.f, 130.f);
@@ -353,7 +250,6 @@ void background(RenderWindow& window) {
 	f3[2].texCoords = sf::Vector2f(230.f, 130.f);
 	f3[3].texCoords = sf::Vector2f(230.f, 230.f);
 
-	sf::VertexArray g1(sf::TriangleStrip, 4);
 	g1[0].position = sf::Vector2f(0.f, 0.f);
 	g1[1].position = sf::Vector2f(0.f, 720.f);
 	g1[2].position = sf::Vector2f(30.f, 0.f);
@@ -364,7 +260,6 @@ void background(RenderWindow& window) {
 	g1[2].texCoords = sf::Vector2f(30.f, 0.f);
 	g1[3].texCoords = sf::Vector2f(30.f, 720.f);
 
-	sf::VertexArray g2(sf::TriangleStrip, 4);
 	g2[0].position = sf::Vector2f(0.f, 690.f);
 	g2[1].position = sf::Vector2f(0.f, 720.f);
 	g2[2].position = sf::Vector2f(1280.f, 690.f);
@@ -375,7 +270,6 @@ void background(RenderWindow& window) {
 	g2[2].texCoords = sf::Vector2f(1280.f, 690.f);
 	g2[3].texCoords = sf::Vector2f(1280.f, 720.f);
 
-	sf::VertexArray g3(sf::TriangleStrip, 4);
 	g3[0].position = sf::Vector2f(1250.f, 0.f);
 	g3[1].position = sf::Vector2f(1250.f, 720.f);
 	g3[2].position = sf::Vector2f(1280.f, 0.f);
@@ -386,7 +280,6 @@ void background(RenderWindow& window) {
 	g3[2].texCoords = sf::Vector2f(1280.f, 0.f);
 	g3[3].texCoords = sf::Vector2f(1280.f, 720.f);
 
-	sf::VertexArray g4(sf::TriangleStrip, 4);
 	g4[0].position = sf::Vector2f(0.f, 0.f);
 	g4[1].position = sf::Vector2f(0.f, 30.f);
 	g4[2].position = sf::Vector2f(1280.f, 0.f);
@@ -397,7 +290,6 @@ void background(RenderWindow& window) {
 	g4[2].texCoords = sf::Vector2f(1280.f, 0.f);
 	g4[3].texCoords = sf::Vector2f(1280.f, 30.f);
 
-	sf::VertexArray block1(sf::TriangleStrip, 5);
 	block1[0].position = sf::Vector2f(1150.f, 570.f);
 	block1[1].position = sf::Vector2f(1115.f, 615.f);
 	block1[2].position = sf::Vector2f(1280.f, 570.f);
@@ -410,7 +302,6 @@ void background(RenderWindow& window) {
 	block1[3].texCoords = sf::Vector2f(1115.f, 720.f);
 	block1[4].texCoords = sf::Vector2f(1280.f, 720.f);
 
-	sf::VertexArray block2(sf::TriangleStrip, 4);
 	block2[0].position = sf::Vector2f(225.f, 195.f);
 	block2[1].position = sf::Vector2f(225.f, 230.f);
 	block2[2].position = sf::Vector2f(520.f, 195.f);
@@ -421,7 +312,6 @@ void background(RenderWindow& window) {
 	block2[2].texCoords = sf::Vector2f(520.f, 195.f);
 	block2[3].texCoords = sf::Vector2f(520.f, 230.f);
 
-	sf::VertexArray block3(sf::TriangleStrip, 8);
 	block3[0].position = sf::Vector2f(515.f, 150.f);
 	block3[1].position = sf::Vector2f(515.f, 230.f);
 	block3[2].position = sf::Vector2f(705.f, 150.f);
@@ -440,91 +330,33 @@ void background(RenderWindow& window) {
 	block3[6].texCoords = sf::Vector2f(1100.f, 195.f);
 	block3[7].texCoords = sf::Vector2f(1100.f, 250.f);
 
-	Texture tg;
-	tg.loadFromFile("background1.png");
+	// Setup Textures
+	tg.loadFromFile(RESOURCES + "images/background1.png");
 	tg.setRepeated(true);
-
-
-	Texture tg2;
-	tg2.loadFromFile("background3.png");
+	tg2.loadFromFile(RESOURCES + "images/background3.png");
 	tg2.setRepeated(true);
 
-
-	sf::RectangleShape rec1(sf::Vector2f(300.f, 35.f));
 	rec1.setPosition(30, 560);
 	rec1.setTexture(&tg2);
 
-
-	// doors
-	int waterdoor = 3;
-
-	Texture wdoor;
-	wdoor.loadFromFile("water door1.PNG");
-	Sprite swdoor;
+	/*-- Doors --*/
+	// Water Door
+	wdoor.loadFromFile(RESOURCES + "images/water_door1.png");
 	swdoor.setTexture(wdoor);
 	swdoor.setTextureRect(IntRect(waterdoor, 1, 110, 125));
 	swdoor.setPosition(140, 36);
 	swdoor.scale(0.75, 0.75);
-
-	int firedoor = 3;
-
-	Texture fdoor;
-	fdoor.loadFromFile("fire door1.PNG");
-	Sprite sfdoor;
+	// Fire Door
+	fdoor.loadFromFile(RESOURCES + "images/fire_door1.png");
 	sfdoor.setTexture(fdoor);
 	sfdoor.setTextureRect(IntRect(firedoor, 1, 110, 125));
 	sfdoor.setPosition(33, 36);
 	sfdoor.scale(0.75, 0.75);
-
-	while (window.isOpen()) {
-		sf::Event event;
-		while (window.pollEvent(event)) {
-			if (event.type == sf::Event::Closed) {
-				window.close();
-			}
-
-			if (Mouse::isButtonPressed(Mouse::Left)) {
-				Vector2i mousepo = Mouse::getPosition(window);
-				cout << mousepo.x << " " << mousepo.y << endl;
-			}
-
-			if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
-				window.close();
-			}
-			else if (Keyboard::isKeyPressed(Keyboard::Key::Right))
-			{
-				swdoor.setTextureRect(IntRect(waterdoor, 1, 110, 125));
-				waterdoor += 160;
-				waterdoor %= 3040;
-			}
-			else if (Keyboard::isKeyPressed(Keyboard::Key::Left))
-			{
-				sfdoor.setTextureRect(IntRect(firedoor, 1, 110, 125));
-				firedoor += 160;
-				firedoor %= 2720;
-			}
-
-
-		}
-
-		window.clear();
-		window.draw(sbback);
-		window.draw(sback);
-		window.draw(f1, &tg);
-		window.draw(f2, &tg);
-		window.draw(f3, &tg);
-		window.draw(rec1);
-		window.draw(g1, &tg);
-		window.draw(g2, &tg);
-		window.draw(g3, &tg);
-		window.draw(g4, &tg);
-		window.draw(block1, &tg);
-		window.draw(block2, &tg);
-		window.draw(block3, &tg);
-		window.draw(sfdoor);
-		window.draw(swdoor);
+	
 }
-void setup_env_and_lakes() {
+
+/* Sets up lakes */
+void setup_env_and_lakes(){
 	//rope:
 	RopeTexture.loadFromFile(RESOURCES+"images/rope.png");
 	Rope.setTexture(RopeTexture);
@@ -548,6 +380,7 @@ void setup_env_and_lakes() {
 	WaterLake.setScale(0.6, 0.6);
 }
 
+/* Sets up the score and sound of the game*/
 void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/)
 {
 	// Texture of diamonds
@@ -586,6 +419,7 @@ void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text&
 	return;
 }
 
+/*TODO*/
 void deal_with_interactions() {
 	if (Fireboy.getGlobalBounds().intersects(WaterLake.getGlobalBounds()))
 	{
@@ -607,8 +441,24 @@ void deal_with_interactions() {
 
 /*This function draws all needed game stuff on game window (diamonds, characters, etc...*/
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
-	window.clear();
+	// background
+	window.draw(sbback);
+	window.draw(sback);
+	window.draw(f1, &tg);
+	window.draw(f2, &tg);
+	window.draw(f3, &tg);
+	window.draw(rec1);
+	window.draw(g1, &tg);
+	window.draw(g2, &tg);
+	window.draw(g3, &tg);
+	window.draw(g4, &tg);
+	window.draw(block1, &tg);
+	window.draw(block2, &tg);
+	window.draw(block3, &tg);
+	window.draw(sfdoor);
+	window.draw(swdoor);
 	// characters
+	window.draw(rect);
 	window.draw(Fireboy);
 	window.draw(Watergirl);
 	// Score
@@ -618,7 +468,7 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(Wire);
 	window.draw(WaterLake);
 	window.draw(FireLake);
-	// Diamonds
+	// diamonds
 	for (int i = 0; i < 4; ++i)
 	{
 		window.draw(red_diamonds[i]);
@@ -627,6 +477,7 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	return;
 }
 
+/*Calculates the current score */
 void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard)
 {
 	//red daimonds
@@ -651,124 +502,91 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 	}
 }
 
-int animate_func(RenderWindow &window, Sprite &FB, Sprite &WG)
+/*Handles the movement and animation of the characters*/
+int animate_func()
 {
-	int row1_B = 10, row2_B = 20, StopRow_B = 10;
-	double jumpV_B = 0; bool isgrounded_B = false;
-
-	int row1_G = 22, row2_G = 5, StopRow_G = 20;
-	double jumpV_G = 0; bool isgrounded_G = false;
-
 	// for making rectangle for jumping on it
-
-	RectangleShape rect(Vector2f(1500, 50));
 	rect.setPosition(0, 700);
 
-	
+	// fireboy controls :
+	if (Keyboard::isKeyPressed(Keyboard::Key::Right))
+	{
+		Fireboy.move(10, 0);
+		Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
+		row1_B += 80;
+		row1_B %= 320;
+	}
 
-		/*
-		Event event;
-		while (window.pollEvent(event))
+
+	else if (Keyboard::isKeyPressed(Keyboard::Key::Left))
+	{
+		Fireboy.move(-10, 0);
+		Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
+		row2_B += 80;
+		row2_B %= 320;
+	}
+
+	else
+	{
+		Fireboy.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
+		StopRow_B += 80;
+		StopRow_B %= 400;
+	}
+
+	// wategirl controls :
+	if (Keyboard::isKeyPressed(Keyboard::Key::A))
+	{
+		Watergirl.move(-10, 0);
+		Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
+		row1_G += 100;
+		row1_G %= 400;
+	}
+
+	else if (Keyboard::isKeyPressed(Keyboard::Key::D))
+	{
+		Watergirl.move(10, 0);
+		Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
+		row2_G += 100;
+		row2_G %= 400;
+	}
+	else
+	{
+		Watergirl.setTextureRect(IntRect(StopRow_G, 472, 56, 86));
+		StopRow_G += 80;
+		StopRow_G %= 320;
+	}
+
+	// fire boy jumping code
+	if (rect.getGlobalBounds().intersects(Fireboy.getGlobalBounds()))
+	{
+		isgrounded_B = true;
+		jumpV_B = 0;
+
+		if (Keyboard::isKeyPressed(Keyboard::Key::Up))
 		{
-			if (event.type == Event::Closed)
-				window.close();
+			jumpV_B = 20;
 		}
-		*/
+	}
+	else
+	{
+		isgrounded_B = false;
+		jumpV_B -= 1.5;
+	}
+	// water girl jumping code 
+	if (rect.getGlobalBounds().intersects(Watergirl.getGlobalBounds()))
+	{
+		isgrounded_G = true;
+		jumpV_G = 0;
 
-		// fireboy controls :
-		if (Keyboard::isKeyPressed(Keyboard::Key::Right))
+		if (Keyboard::isKeyPressed(Keyboard::Key::W))
 		{
-			FB.move(10, 0);
-			FB.setTextureRect(IntRect(row1_B, -22, 70, 100));
-			row1_B += 80;
-			row1_B %= 320;
+			jumpV_G = 20;
 		}
-
-
-		else if (Keyboard::isKeyPressed(Keyboard::Key::Left))
-		{
-			FB.move(-10, 0);
-			FB.setTextureRect(IntRect(row2_B, 78, 70, 100));
-			row2_B += 80;
-			row2_B %= 320;
-		}
-
-		else
-		{
-			FB.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
-			StopRow_B += 80;
-			StopRow_B %= 400;
-		}
-
-		// wategirl controls :
-
-		if (Keyboard::isKeyPressed(Keyboard::Key::A))
-		{
-			WG.move(-10, 0);
-			WG.setTextureRect(IntRect(row1_G, 18, 90, 80));
-			row1_G += 100;
-			row1_G %= 400;
-		}
-
-		else if (Keyboard::isKeyPressed(Keyboard::Key::D))
-		{
-			WG.move(10, 0);
-			WG.setTextureRect(IntRect(row2_G, 118, 96, 80));
-			row2_G += 100;
-			row2_G %= 400;
-		}
-		else
-		{
-			WG.setTextureRect(IntRect(StopRow_G, 472, 56, 86));
-			StopRow_G += 80;
-			StopRow_G %= 320;
-		}
-
-		// fire boy jumping code
-
-		if (rect.getGlobalBounds().intersects(FB.getGlobalBounds()))
-		{
-			isgrounded_B = true;
-			jumpV_B = 0;
-
-			if (Keyboard::isKeyPressed(Keyboard::Key::Up))
-			{
-				jumpV_B = 20;
-			}
-		}
-		else
-		{
-			isgrounded_B = false;
-			jumpV_B -= 1.5;
-		}
-
-		// water girl jumping code 
-
-		if (rect.getGlobalBounds().intersects(WG.getGlobalBounds()))
-		{
-			isgrounded_G = true;
-			jumpV_G = 0;
-
-			if (Keyboard::isKeyPressed(Keyboard::Key::W))
-			{
-				jumpV_G = 20;
-			}
-		}
-		else
-		{
-			isgrounded_G = false;
-			jumpV_G -= 1.5;
-		}
-		FB.move(0, -jumpV_B);
-		WG.move(0, -jumpV_G);
-		//for execute
-		/*
-		window.clear();
-		window.draw(rect);
-		window.draw(FB);
-		window.draw(WG);
-		
-		window.display();
-		*/
+	}
+	else
+	{
+		isgrounded_G = false;
+		jumpV_G -= 1.5;
+	}
 	return 0;
 }
