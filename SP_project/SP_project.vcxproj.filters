@@ -94,6 +94,12 @@
     <Image Include="resources\images\water_door1.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="resources\images\bground1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\images\bground2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="resources\fonts\Font1.ttf">
