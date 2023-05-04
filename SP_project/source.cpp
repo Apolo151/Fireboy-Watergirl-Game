@@ -1,45 +1,73 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>
+#include <fstream>
+#include<string>
 #include"Menu.h"
+#include "levers.cpp"
 
 using namespace std;
 using namespace sf;
-const string RESOURCES = "resources/";
+//const string RESOURCES = "resources/";
 bool z = false;
 
-/* Write functions declarations*/
-void score(Sprite Red[], Sprite Blue[], int& Sc, Text& Scboard);
-//int animate_func(RenderWindow& window, Sprite& player1, Sprite& player2);
-void create_characters();
-void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/);
-void setup_env_and_lakes();
+/* Write functions declarations */
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]);
+// Score
+void score(Sprite Red[], Sprite Blue[], int& Sc, Text& Scboard);
+void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/);
+void game_win_end();
+// Env
+void setup_env_and_lakes();
 void deal_with_interactions();
+void handle_collisions();
+
+// Background
 void setup_background();
 void check_background_collisions(RenderWindow& window);
+// Character & Animation
 int animate_func();
+void create_characters();
 
 /* Declare global variables*/
+
+// Score
 Font ScoreFont;
 Text ScoreBoard;
+Text ScoreSheet;
 int Score = 0, waterdoor = 3, firedoor = 3;
+int HighestScore;
+//
+Texture GameEndWindow_Texture;	//Texture when game end
+Sprite GameEndWindow;	//sprite for game end
+String GameState = "running";	//State variable to check if game ended or not ("win", "lose", "running")
+fstream Highest;	//file for save the highest score
+// Music
 Music music;
-Sprite Fireboy, Watergirl, FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
-Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, WaterLakeTexture, WireTexture, RopeTexture;
+
+// Background
 Texture tg, tg2, tg3, tg4, wdoor, fdoor, tback, tbback;
 Sprite swdoor, sfdoor, sback, sbback;
 VertexArray f1(sf::TriangleStrip, 9), f2(sf::TriangleStrip, 8), f3(sf::TriangleStrip, 4),
 g1(sf::TriangleStrip, 4), g2(sf::TriangleStrip, 4), g3(sf::TriangleStrip, 4), g4(sf::TriangleStrip, 4),
 block1(sf::TriangleStrip, 5), block2(sf::TriangleStrip, 4), block3(sf::TriangleStrip, 8), block4(sf::TriangleStrip, 6),
 block6(sf::TriangleStrip, 8);
-//
+// Env
+Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, 
+WaterLakeTexture, WireTexture, RopeTexture;
+Sprite LeverBase, LeverArm;
+Sprite Fireboy, Watergirl, FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
+
 pair<int, int> WINDOW_DIMENSIONS = { 1280, 900 };
-///
+/* Character Animation Sprite Sheet Cutting numbers*/
 int row1_B = 10, row2_B = 20, StopRow_B = 10;
 double jumpV_B = 0; bool isgrounded_B = false;
 int row1_G = 22, row2_G = 5, StopRow_G = 20;
 double jumpV_G = 0; bool isgrounded_G = false;
+
+/* Levers, Buttons, etc.. Sprite sheet cutting numbers*/
+
+int Lever_row = 0, Button1_row, Button2_row;
 
 // for making rectangle for jumping on it
 sf::RectangleShape rec1(sf::Vector2f(300.f, 35.f)),
@@ -47,7 +75,15 @@ rect(Vector2f(1500, 50)),
 f4(sf::Vector2f(845.f, 35.f)),
 block5(sf::Vector2f(120.f, 105.f));
 
+
+// Game Objects
+Lever lever(false);
+Button button1(382, 472), button2(1000, 325);
+Elevator elevator1, elevator2;
+Box box1;
+
 /*--------------------------*/
+
 
 int main()
 {
@@ -60,7 +96,13 @@ int main()
 	Texture Maintexture;
 	Maintexture.loadFromFile(RESOURCES+"images/menu_image.jpg");
 	backg.setTexture(&Maintexture);
+	//
+	//Taking the value of highest score at the bigening of the game
+	Highest.open("ScoreSheet.txt", ios::in | ios::out);
+	Highest >> HighestScore;
+	Highest.close();
 
+	
 	while (window.isOpen())
 	{
 		Event event;
@@ -103,8 +145,14 @@ int main()
 						create_characters();
 						// Setup the background
 						setup_background();
+						game_win_end();
 						/*-------------------------------------------*/
 						while (PLAY.isOpen()) {
+							if (Keyboard::isKeyPressed(Keyboard::Key::F))
+							{
+								GameState = "win";
+								cout << "yo";
+							}
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
 							// interactions with lakes, levers, buttons, etc...
@@ -113,6 +161,7 @@ int main()
 							animate_func();
 							// check for colliding with the background
 							check_background_collisions(PLAY);
+							handle_collisions();
 							PLAY.clear();
 							draw_all(PLAY, red_diamonds, blue_diamonds);
 							//
@@ -133,12 +182,12 @@ int main()
 									if (aevent.key.code == Keyboard::Escape)
 									{	
 										music.stop();
+										GameState = "lose";
 										PLAY.close();
 									}
 								}
 							}
 						}
-				
 					}
 					if (x == 1)
 					{
@@ -188,13 +237,14 @@ void create_characters() {
 	load_photo2.loadFromFile(RESOURCES + "sprites/watergirl_sprite.png");
 	Watergirl.setTexture(load_photo2);
 	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
-	Watergirl.setPosition(150, 100);
+	//(150, 100)
+	Watergirl.setPosition(380, 100);
 	Watergirl.scale(1, 1);
 	//
 	return;
 }
 
-/* Sets up background*/
+/* Sets up background */
 void setup_background() {
 
 	tg.loadFromFile(RESOURCES + "images/background1.png");
@@ -433,7 +483,7 @@ void setup_env_and_lakes(){
 	FireLake.setPosition(550, 350);
 	FireLake.setScale(0.7, 0.7);
 
-	//wirewire.png"
+	//wirewire.png
 	WireTexture.loadFromFile(RESOURCES + "images/wire.png");
 	Wire.setTexture(WireTexture);
 	Wire.setPosition(550, 550);
@@ -443,28 +493,38 @@ void setup_env_and_lakes(){
 	WaterLake.setTexture(WaterLakeTexture);
 	WaterLake.setPosition(750, 620);
 	WaterLake.setScale(0.6, 0.6);
+
+	/* Levers */
+	// (260, 595, 306, 606)
+	lever.set_pos(220, 715, 260, 730, 33.f);
+	elevator1.set_pos(30, 500, 20, 100);
+	elevator2.set_pos(1103, 400, 1000, 200);
+	/* Buttons */
+
+	/* Boxes*/
+	box1.set_pos(606, 220);
 }
 
 /* Sets up the score and sound of the game*/
 void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/)
 {
 	// Texture of diamonds
-	R_diamondTexture.loadFromFile(RESOURCES+"images/CharAssets.png");
+	R_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
 	B_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
 
 	for (int i = 0; i < 4; ++i)
 	{
 		red_diamonds[i].setTexture(R_diamondTexture);
-		red_diamonds[i].setScale(0.5, 0.5);
-		red_diamonds[i].setPosition(200 + (60 * (pow(i, 2) - 1)), 100 + (50 * (pow(i, 2) - 1)));
-		red_diamonds[i].setTextureRect(IntRect(136 * 8, 136 * 10, 136, 136));
+red_diamonds[i].setScale(1, 1);
+red_diamonds[i].setPosition(500 - (110 * i), 710 - (i * 170));
+red_diamonds[i].setTextureRect(IntRect(136 * 8, 136 * 10, 136, 136));
 	}
 
 	for (int i = 0; i < 4; ++i)
 	{
 		blue_diamonds[i].setTexture(B_diamondTexture);
-		blue_diamonds[i].setScale(0.5, 0.5);
-		blue_diamonds[i] .setPosition(200 + (60 * (pow(i, 2) + 5)), 150 + (30 * (pow(i, 2) + 4)));
+		blue_diamonds[i].setScale(1, 1);
+		blue_diamonds[i].setPosition(1000 - (70 * i), 750 - (i * 170));
 		blue_diamonds[i].setTextureRect(IntRect(136 * 7, 136 * 10, 136, 136));
 	}
 
@@ -473,10 +533,10 @@ void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text&
 	ScoreBoard.setFont(ScoreFont);
 	ScoreBoard.setString("Score: " + to_string(Score));
 	ScoreBoard.setFillColor(Color(220, 220, 50, 255));
-	ScoreBoard.setPosition(20, 20);
+	ScoreBoard.setPosition(30, 30);
 	ScoreBoard.setCharacterSize(35);
 	ScoreBoard.Bold;
-	
+
 	//Music
 	music.openFromFile(RESOURCES + "sound/MenuMusic.ogg");
 	//music.play();
@@ -484,31 +544,133 @@ void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text&
 	return;
 }
 
-/*TODO*/
+/* TODO */
 void deal_with_interactions() {
-	if (Fireboy.getGlobalBounds().intersects(WaterLake.getGlobalBounds()))
+
+	/* Get current objects bounds */
+	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
+	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
+	FloatRect elev1_bounds = elevator1.elevator.getGlobalBounds();
+	FloatRect elev2_bounds = elevator2.elevator.getGlobalBounds();
+	FloatRect button1_bounds = button1.button.getGlobalBounds();
+	FloatRect button2_bounds = button2.button.getGlobalBounds();
+	/*---------------------------*/
+
+
+	/* Lakes interactions */
+	// Fireboy
+	if (fireboy_bounds.intersects(WaterLake.getGlobalBounds()))
 	{
 		Fireboy.setScale(0, 0);
-	}
-	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()))
-	{
-		Watergirl.setScale(0, 0);
+		GameState = "lose";
 	}
 	if (Fireboy.getGlobalBounds().intersects(Rope.getGlobalBounds()))
 	{
 		z = true;
 	}
+	// Water girl
+	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()))
+	{
+		Watergirl.setScale(0, 0);
+	}
 	if (Watergirl.getGlobalBounds().intersects(Rope.getGlobalBounds()) && z)
 	{
 		Watergirl.setScale(0, 0);
+	}
+
+	/* Elevators interactions */
+	// Fireboy
+
+	if (fireboy_bounds.top + fireboy_bounds.height <= elev2_bounds.top) {
+
+	}
+	// Watergirl
+	if (watergirl_bounds.top + watergirl_bounds.height <= elev1_bounds.top) {
+
+	}
+	if (watergirl_bounds.top + watergirl_bounds.height <= elev2_bounds.top) {
+
+	}
+	/* Buttons interactions */
+
+	/* Handle Lever*/
+	if (Fireboy.getGlobalBounds().intersects(lever.Arm.getGlobalBounds())) {
+		if (lever.isOn) {
+			lever.turn_on();
+		}
+		else {
+			lever.turn_off();
+		}
+	}
+}
+
+/* Handle collisions */
+void handle_collisions() {
+	// Get Objects Bounds
+	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
+	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
+	//FloatRect elev1_bounds = elevator1.elevator.getGlobalBounds();
+	FloatRect rec_bounds = rec1.getGlobalBounds();
+	// Cases: top / bottom / left / right
+	bool above = false, under = false, toleftof = false, torightof = false;
+	cout << rec_bounds.left << " " << rec_bounds.width;
+	/* Fireboy */
+	if(fireboy_bounds.intersects(rec_bounds)){
+		// Top
+		if (fireboy_bounds.top + fireboy_bounds.height-2 >= rec_bounds.top)
+		{
+			Fireboy.setPosition(fireboy_bounds.left, rec_bounds.top - fireboy_bounds.height);
+		}
+		// Down
+		if (fireboy_bounds.top <= rec_bounds.top + rec_bounds.height)
+		{
+			//fireboy_bounds.left = rec_bounds.left - fireboy_bounds.width;
+			Fireboy.setPosition(fireboy_bounds.left, rec_bounds.top);
+		}
+		// Left
+		if (fireboy_bounds.left + fireboy_bounds.width >= rec_bounds.left)
+		{
+			//fireboy_bounds.left = rec_bounds.left - fireboy_bounds.width;
+			Fireboy.setPosition(fireboy_bounds.left, fireboy_bounds.top);
+		}
+		// Right
+	}
+	
+	/* Watergirl */
+	if (watergirl_bounds.intersects(rec_bounds)) {
+		// Top
+		if (watergirl_bounds.top + watergirl_bounds.height - 2 >= rec_bounds.top) {
+			Watergirl.setPosition(watergirl_bounds.left, rec_bounds.top - watergirl_bounds.height);
+		}
+		// Down
+		if (watergirl_bounds.top <= rec_bounds.top+rec_bounds.height)
+		{
+			watergirl_bounds.left = rec_bounds.left - watergirl_bounds.width;
+			Watergirl.setPosition(watergirl_bounds.left, rec_bounds.top);
+		}
+		// Left
+		if (watergirl_bounds.left + watergirl_bounds.width <= rec_bounds.left)
+		{
+			watergirl_bounds.left = rec_bounds.left - watergirl_bounds.width;
+		}
+		// Right
+		if (watergirl_bounds.left >= rec1.getPosition().x + rec_bounds.width)
+		{
+			watergirl_bounds.left = rec1.getPosition().x + rec_bounds.width;
+		}
 	}
 }
 
 /*This function draws all needed game stuff on game window (diamonds, characters, etc...*/
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
-	// background
+	
+	/* Background */
 	window.draw(sbback);
 	window.draw(sback);
+	// Buttons
+	window.draw(button1.button);
+	window.draw(button2.button);
+	/* Map */
 	window.draw(f1, &tg);
 	window.draw(f2, &tg);
 	window.draw(f3, &tg);
@@ -524,9 +686,15 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(block4, &tg);
 	window.draw(block5);
 	window.draw(block6, &tg);
+	// Doors
 	window.draw(sfdoor);
 	window.draw(swdoor);
-	
+	// Levers & Elevators & boxes
+	window.draw(lever.Arm);
+	window.draw(lever.Base);
+	window.draw(elevator1.elevator);
+	window.draw(elevator2.elevator);
+	window.draw(box1.box);
 	// characters
 	//window.draw(rect);
 	window.draw(Fireboy);
@@ -534,8 +702,8 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	// Score
 	window.draw(ScoreBoard);
 	// environment
-	window.draw(Rope);
-	window.draw(Wire);
+	//window.draw(Rope);
+	//window.draw(Wire);
 	window.draw(WaterLake);
 	window.draw(FireLake);
 	// diamonds
@@ -544,13 +712,20 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 		window.draw(red_diamonds[i]);
 		window.draw(blue_diamonds[i]);
 	}
+	// Score
+	//ScoreSheet
+	if (GameState == "win") {
+		window.draw(GameEndWindow);
+		window.draw(ScoreSheet);
+	}
+	
 	return;
 }
 
 /*Calculates the current score */
 void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard)
 {
-	//red daimonds
+	//red diamonds
 	for (int i = 0; i < 4; ++i)
 	{
 		if (Fireboy.getGlobalBounds().intersects(red_diamonds[i].getGlobalBounds()))
@@ -558,9 +733,10 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 			red_diamonds[i].setScale(0, 0);
 			++Sc;
 			Scboard.setString("Score: " + to_string(Sc));
+			ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
 		}
 	}
-	//blue daimonds
+	//blue diamonds
 	for (int i = 0; i < 4; ++i)
 	{
 		if (Watergirl.getGlobalBounds().intersects(blue_diamonds[i].getGlobalBounds()))
@@ -568,18 +744,48 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 			blue_diamonds[i].setScale(0, 0);
 			++Sc;
 			Scboard.setString("Score: " + to_string(Sc));
+			ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
 		}
 	}
+	//
+	if (GameState == "win")
+	{
+		if (Sc > HighestScore)
+		{
+			HighestScore = Sc;
+			Highest.open("ScoreSheet.txt", ios::in | ios::out);
+			Highest << HighestScore;
+			Highest.close();
+		}
+	}
+}
+
+/*Show the scoresheet after reached the gates*/
+void game_win_end()
+{
+	GameEndWindow_Texture.loadFromFile("resources/images/PopupAssets.png");
+
+	GameEndWindow.setTexture(GameEndWindow_Texture);
+	GameEndWindow.setScale(0.75, 0.75);
+	GameEndWindow.setPosition(260, 180);
+	GameEndWindow.setTextureRect(IntRect(0, 225, 1060, 409 * 1.45));
+
+	ScoreSheet.setFont(ScoreFont);
+	ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
+	ScoreSheet.setFillColor(Color(220, 220, 50, 255));
+	ScoreSheet.setPosition(420, 280);
+	ScoreSheet.setCharacterSize(35);
+	ScoreSheet.Bold;
 }
 
 /*Handles the movement and animation of the characters*/
 int animate_func()
 {
 	// for making rectangle for jumping on it
-	rect.setPosition(0, 700);
+	rect.setPosition(0, 750);
 
 	// fireboy controls :
-	if (Keyboard::isKeyPressed(Keyboard::Key::Right))
+	if (Keyboard::isKeyPressed(Keyboard::Key::Right) && Fireboy.getPosition().x < 1245)
 	{
 		Fireboy.move(10, 0);
 		Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
@@ -588,7 +794,7 @@ int animate_func()
 	}
 
 
-	else if (Keyboard::isKeyPressed(Keyboard::Key::Left))
+	else if (Keyboard::isKeyPressed(Keyboard::Key::Left) && Fireboy.getPosition().x > 35)
 	{
 		Fireboy.move(-10, 0);
 		Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
@@ -604,7 +810,7 @@ int animate_func()
 	}
 
 	// wategirl controls :
-	if (Keyboard::isKeyPressed(Keyboard::Key::A))
+	if (Keyboard::isKeyPressed(Keyboard::Key::A) && Watergirl.getPosition().x > 35)
 	{
 		Watergirl.move(-10, 0);
 		Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
@@ -612,7 +818,7 @@ int animate_func()
 		row1_G %= 400;
 	}
 
-	else if (Keyboard::isKeyPressed(Keyboard::Key::D))
+	else if (Keyboard::isKeyPressed(Keyboard::Key::D) && Watergirl.getPosition().x < 1245)
 	{
 		Watergirl.move(10, 0);
 		Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
@@ -655,7 +861,7 @@ int animate_func()
 	}
 	else
 	{
-		isgrounded_G = false;
+		isgrounded_G = true;
 		jumpV_G -= 1.5;
 	}
 	return 0;
