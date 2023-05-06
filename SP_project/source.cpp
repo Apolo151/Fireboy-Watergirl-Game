@@ -8,9 +8,9 @@
 
 using namespace std;
 using namespace sf;
+
 //const string RESOURCES = "resources/";
 bool z = false;
-
 /* Write functions declarations */
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]);
 // Score
@@ -20,11 +20,14 @@ void game_win_end();
 // Env
 void setup_env_and_lakes();
 void deal_with_interactions();
-void handle_collisions();
+
 
 // Background
+void setup_blocks(Sprite blocks[]);
 void setup_background();
 void check_background_collisions(RenderWindow& window);
+template <typename T>
+void handle_background_collisions(T block);
 // Character & Animation
 int animate_func();
 void create_characters();
@@ -46,12 +49,12 @@ fstream Highest;	//file for save the highest score
 Music music;
 
 // Background
-Texture tg, tg2, tg3, tg4, wdoor, fdoor, tback, tbback;
-Sprite swdoor, sfdoor, sback, sbback;
-VertexArray f1(sf::TriangleStrip, 9), f2(sf::TriangleStrip, 8), f3(sf::TriangleStrip, 4),
-g1(sf::TriangleStrip, 4), g2(sf::TriangleStrip, 4), g3(sf::TriangleStrip, 4), g4(sf::TriangleStrip, 4),
-block1(sf::TriangleStrip, 5), block2(sf::TriangleStrip, 4), block3(sf::TriangleStrip, 8), block4(sf::TriangleStrip, 6),
-block6(sf::TriangleStrip, 8);
+Texture tg1, tg2, wdoor, fdoor, tback;
+Sprite swdoor, sfdoor, sback;
+sf::RectangleShape g1(sf::Vector2f(35.f, 1280.f)), g2(sf::Vector2f(1280.f, 35.f)),
+g3(sf::Vector2f(35.f, 1280.f)), g4(sf::Vector2f(1280.f, 35.f));
+Sprite blocks[11];
+Texture Tb1, Tb2, Tb3, Tb4, Tb5;
 // Env
 Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, 
 WaterLakeTexture, WireTexture, RopeTexture;
@@ -84,7 +87,7 @@ Box box1;
 
 /*--------------------------*/
 
-
+/* General Functions */
 int main()
 {
 	//make a main menu window (old (950, 750))
@@ -161,7 +164,6 @@ int main()
 							animate_func();
 							// check for colliding with the background
 							check_background_collisions(PLAY);
-							handle_collisions();
 							PLAY.clear();
 							draw_all(PLAY, red_diamonds, blue_diamonds);
 							//
@@ -222,255 +224,182 @@ int main()
 	}
 	return 0;
 }
+// This function draws all needed game stuff on game window (diamonds, characters, etc...
+void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
+	/* Background */
+	window.draw(sback);
+	// Buttons
+	window.draw(button1.button);
+	window.draw(button2.button);
+	/* Map */
+	// background
+	window.clear();
+	window.draw(sback);
+	window.draw(g1);
+	window.draw(g2);
+	window.draw(g3);
+	window.draw(g4);
+	for (int i = 0; i < 11; i++)
+	{
+		window.draw(blocks[i]);
+	}
+	// Doors
+	window.draw(sfdoor);
+	window.draw(swdoor);
+	// Levers & Elevators & boxes
+	window.draw(lever.Arm);
+	window.draw(lever.Base);
+	window.draw(elevator1.elevator);
+	window.draw(elevator2.elevator);
+	window.draw(box1.box);
+	// characters
+	//window.draw(rect);
+	window.draw(Fireboy);
+	window.draw(Watergirl);
+	// Score
+	window.draw(ScoreBoard);
+	// environment
+	//window.draw(Rope);
+	//window.draw(Wire);
+	window.draw(WaterLake);
+	window.draw(FireLake);
+	// diamonds
+	for (int i = 0; i < 4; ++i)
+	{
+		window.draw(red_diamonds[i]);
+		window.draw(blue_diamonds[i]);
+	}
+	// Score
+	//ScoreSheet
+	if (GameState == "win") {
+		window.draw(GameEndWindow);
+		window.draw(ScoreSheet);
+	}
 
-/* Create the two characters */
-void create_characters() {
-	// for charachter fireboy
-	
-	load_photo1.loadFromFile(RESOURCES + "sprites/fireboy_sprite.png");
-	Fireboy.setTexture(load_photo1);
-	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
-	Fireboy.setPosition(100, 100);
-	Fireboy.scale(1, 1);
-
-	// for charachter watergirl
-	load_photo2.loadFromFile(RESOURCES + "sprites/watergirl_sprite.png");
-	Watergirl.setTexture(load_photo2);
-	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
-	//(150, 100)
-	Watergirl.setPosition(380, 100);
-	Watergirl.scale(1, 1);
-	//
 	return;
 }
 
-/* Sets up background */
+/* Background & ENV*/
+
+//Sets up background
 void setup_background() {
-
-	tg.loadFromFile(RESOURCES + "images/background1.png");
-	tg.setRepeated(true);
-
-	tg2.loadFromFile(RESOURCES + "images/background3.png");
-	tg2.setRepeated(true);
-
-	tg3.loadFromFile(RESOURCES + "images/bground1.png");
-	tg4.loadFromFile(RESOURCES + "images/bground2.png");
-
-	tbback.loadFromFile(RESOURCES + "images/bbackground.png");
-	tbback.setRepeated(true);
-
-	sbback.setTexture(tbback);
-	sbback.setTextureRect({ 0, 0,1280, 900 });
-
-	tback.loadFromFile(RESOURCES + "images/background2.png");
+	tback.loadFromFile(RESOURCES+"images/background2.png");
 	tback.setRepeated(true);
 
 	sback.setTexture(tback);
 	sback.setTextureRect({ 0, 0,1280, 900 });
+	// framebackground
+	tg1.loadFromFile(RESOURCES + "images/bground1.png");
+	tg1.setRepeated(true);
+;
+	tg2.loadFromFile(RESOURCES + "images/bground2.png");
+	tg2.setRepeated(true);
+	/*--------------------*/
+	g1.setPosition(0, 0);
+	g1.setTexture(&tg2);
+
+	g2.setPosition(0, 865);
+	g2.setTexture(&tg1);
+
+	g3.setPosition(1245, 0);
+	g3.setTexture(&tg2);
+
+	g4.setPosition(0, 0);
+	g4.setTexture(&tg1);
+	// Textures
+	Tb1.loadFromFile(RESOURCES + "images/Tb1.png");
+	Tb1.setRepeated(true);
+
+	Tb2.loadFromFile(RESOURCES + "images/Tb2.png");
+	Tb2.setRepeated(true);
+
+	Tb3.loadFromFile(RESOURCES + "images/Tb3.png");
+	Tb3.setRepeated(true);
+
+	Tb4.loadFromFile(RESOURCES + "images/Tb4.png");
+	Tb4.setRepeated(true);
+
+	Tb5.loadFromFile(RESOURCES + "images/Tb5.png");
+	Tb5.setRepeated(true);
+	//
+	setup_blocks(blocks);
+	for (int i = 0; i < 11; i++)
+	{
+		if (i == 0 || i == 1) {
+			blocks[i].setTexture(Tb1);
+		}
+		else if (i == 2 || i == 3 || i == 4 || i == 5)
+			blocks[i].setTexture(Tb2);
+
+		else if (i == 6 || i == 7 || i == 8)
+			blocks[i].setTexture(Tb3);
+
+		else if (i == 9)
+			blocks[i].setTexture(Tb4);
+		else if (i == 10)
+			blocks[i].setTexture(Tb5);
+	}
 	/*-------------*/
-	f1[0].position = sf::Vector2f(30.f, 605.f);
-	f1[1].position = sf::Vector2f(30.f, 630.f);
-	f1[2].position = sf::Vector2f(470.f, 605.f);
-	f1[3].position = sf::Vector2f(420.f, 630.f);
-	f1[4].position = sf::Vector2f(520.f, 680.f);
-	f1[5].position = sf::Vector2f(470.f, 705.f);
-	f1[6].position = sf::Vector2f(1020.f, 680.f);
-	f1[7].position = sf::Vector2f(615.f, 705.f);
-	f1[8].position = sf::Vector2f(1045.f, 705.f);
-
-	f1[0].texCoords = sf::Vector2f(30.f, 605.f);
-	f1[1].texCoords = sf::Vector2f(30.f, 630.f);
-	f1[2].texCoords = sf::Vector2f(470.f, 605.f);
-	f1[3].texCoords = sf::Vector2f(420.f, 630.f);
-	f1[4].texCoords = sf::Vector2f(520.f, 680.f);
-	f1[5].texCoords = sf::Vector2f(470.f, 705.f);
-	f1[6].texCoords = sf::Vector2f(1020.f, 680.f);
-	f1[7].texCoords = sf::Vector2f(615.f, 705.f);
-	f1[8].texCoords = sf::Vector2f(1045.f, 705.f);
-
-
-	f2[0].position = sf::Vector2f(175.f, 490.f);
-	f2[1].position = sf::Vector2f(175.f, 520.f);
-	f2[2].position = sf::Vector2f(580.f, 490.f);
-	f2[3].position = sf::Vector2f(530.f, 520.f);
-	f2[4].position = sf::Vector2f(600.f, 520.f);
-	f2[5].position = sf::Vector2f(550.f, 550.f);
-	f2[6].position = sf::Vector2f(1280.f, 520.f);
-	f2[7].position = sf::Vector2f(1280.f, 550.f);
-
-	f2[0].texCoords = sf::Vector2f(175.f, 490.f);
-	f2[1].texCoords = sf::Vector2f(175.f, 520.f);
-	f2[2].texCoords = sf::Vector2f(580.f, 490.f);
-	f2[3].texCoords = sf::Vector2f(530.f, 520.f);
-	f2[4].texCoords = sf::Vector2f(600.f, 520.f);
-	f2[5].texCoords = sf::Vector2f(550.f, 550.f);
-	f2[6].texCoords = sf::Vector2f(1280.f, 520.f);
-	f2[7].texCoords = sf::Vector2f(1280.f, 550.f);
-
-
-	f3[0].position = sf::Vector2f(29.f, 225.f);
-	f3[1].position = sf::Vector2f(29.f, 380.f);
-	f3[2].position = sf::Vector2f(160.f, 225.f);
-	f3[3].position = sf::Vector2f(160.f, 380.f);
-
-	f3[0].texCoords = sf::Vector2f(29.f, 225.f);
-	f3[1].texCoords = sf::Vector2f(29.f, 380.f);
-	f3[2].texCoords = sf::Vector2f(160.f, 225.f);
-	f3[3].texCoords = sf::Vector2f(160.f, 380.f);
-
-
-
-	f4.setPosition(435, 180);
-	f4.setTexture(&tg3);
-
-
-	g1[0].position = sf::Vector2f(0.f, 0.f);
-	g1[1].position = sf::Vector2f(0.f, 900.f);
-	g1[2].position = sf::Vector2f(30.f, 0.f);
-	g1[3].position = sf::Vector2f(30.f, 900.f);
-
-	g1[0].texCoords = sf::Vector2f(0.f, 0.f);
-	g1[1].texCoords = sf::Vector2f(0.f, 900.f);
-	g1[2].texCoords = sf::Vector2f(30.f, 0.f);
-	g1[3].texCoords = sf::Vector2f(30.f, 900.f);
-
-
-	g2[0].position = sf::Vector2f(0.f, 870.f);
-	g2[1].position = sf::Vector2f(0.f, 900.f);
-	g2[2].position = sf::Vector2f(1280.f, 870.f);
-	g2[3].position = sf::Vector2f(1280.f, 900.f);
-
-	g2[0].texCoords = sf::Vector2f(0.f, 870.f);
-	g2[1].texCoords = sf::Vector2f(0.f, 900.f);
-	g2[2].texCoords = sf::Vector2f(1280.f, 870.f);
-	g2[3].texCoords = sf::Vector2f(1280.f, 900.f);
-
-
-	g3[0].position = sf::Vector2f(1250.f, 0.f);
-	g3[1].position = sf::Vector2f(1250.f, 900.f);
-	g3[2].position = sf::Vector2f(1280.f, 0.f);
-	g3[3].position = sf::Vector2f(1280.f, 900.f);
-
-	g3[0].texCoords = sf::Vector2f(1250.f, 0.f);
-	g3[1].texCoords = sf::Vector2f(1250.f, 900.f);
-	g3[2].texCoords = sf::Vector2f(1280.f, 0.f);
-	g3[3].texCoords = sf::Vector2f(1280.f, 900.f);
-
-
-	g4[0].position = sf::Vector2f(0.f, 0.f);
-	g4[1].position = sf::Vector2f(0.f, 30.f);
-	g4[2].position = sf::Vector2f(1280.f, 0.f);
-	g4[3].position = sf::Vector2f(1280.f, 30.f);
-
-	g4[0].texCoords = sf::Vector2f(0.f, 0.f);
-	g4[1].texCoords = sf::Vector2f(0.f, 30.f);
-	g4[2].texCoords = sf::Vector2f(1280.f, 0.f);
-	g4[3].texCoords = sf::Vector2f(1280.f, 30.f);
-
-
-	block1[0].position = sf::Vector2f(1150.f, 750.f);
-	block1[1].position = sf::Vector2f(1115.f, 795.f);
-	block1[2].position = sf::Vector2f(1280.f, 750.f);
-	block1[3].position = sf::Vector2f(1115.f, 900.f);
-	block1[4].position = sf::Vector2f(1280.f, 900.f);
-
-	block1[0].texCoords = sf::Vector2f(1150.f, 750.f);
-	block1[1].texCoords = sf::Vector2f(1115.f, 795.f);
-	block1[2].texCoords = sf::Vector2f(1280.f, 750.f);
-	block1[3].texCoords = sf::Vector2f(1115.f, 900.f);
-	block1[4].texCoords = sf::Vector2f(1280.f, 900.f);
-
-	block2[0].position = sf::Vector2f(155.f, 345.f);
-	block2[1].position = sf::Vector2f(155.f, 380.f);
-	block2[2].position = sf::Vector2f(520.f, 345.f);
-	block2[3].position = sf::Vector2f(520.f, 380.f);
-
-	block2[0].texCoords = sf::Vector2f(155.f, 345.f);
-	block2[1].texCoords = sf::Vector2f(155.f, 380.f);
-	block2[2].texCoords = sf::Vector2f(520.f, 345.f);
-	block2[3].texCoords = sf::Vector2f(520.f, 380.f);
-
-
-	block3[0].position = sf::Vector2f(515.f, 270.f);
-	block3[1].position = sf::Vector2f(515.f, 380.f);
-	block3[2].position = sf::Vector2f(705.f, 270.f);
-	block3[3].position = sf::Vector2f(850.f, 380.f);
-	block3[4].position = sf::Vector2f(850.f, 345.f);
-	block3[5].position = sf::Vector2f(900.f, 400.f);
-	block3[6].position = sf::Vector2f(1100.f, 345.f);
-	block3[7].position = sf::Vector2f(1100.f, 400.f);
-
-	block3[0].texCoords = sf::Vector2f(515.f, 270.f);
-	block3[1].texCoords = sf::Vector2f(515.f, 380.f);
-	block3[2].texCoords = sf::Vector2f(705.f, 270.f);
-	block3[3].texCoords = sf::Vector2f(850.f, 380.f);
-	block3[4].texCoords = sf::Vector2f(850.f, 345.f);
-	block3[5].texCoords = sf::Vector2f(900.f, 400.f);
-	block3[6].texCoords = sf::Vector2f(1100.f, 345.f);
-	block3[7].texCoords = sf::Vector2f(1100.f, 400.f);
-
-	block4[0].position = sf::Vector2f(1000.f, 550.f);
-	block4[1].position = sf::Vector2f(1020.f, 580.f);
-	block4[2].position = sf::Vector2f(1280.f, 550.f);
-	block4[3].position = sf::Vector2f(1115.f, 580.f);
-	block4[4].position = sf::Vector2f(1280.f, 630.f);
-	block4[5].position = sf::Vector2f(1150.f, 630.f);
-
-	block4[0].texCoords = sf::Vector2f(1000.f, 550.f);
-	block4[1].texCoords = sf::Vector2f(1020.f, 580.f);
-	block4[2].texCoords = sf::Vector2f(1280.f, 550.f);
-	block4[3].texCoords = sf::Vector2f(1115.f, 580.f);
-	block4[4].texCoords = sf::Vector2f(1280.f, 630.f);
-	block4[5].texCoords = sf::Vector2f(1150.f, 630.f);
-
-	block5.setPosition(315, 180);
-	block5.setTexture(&tg4);
-
-	block6[0].position = sf::Vector2f(260.f, 120.f);
-	block6[1].position = sf::Vector2f(240.f, 150.f);
-	block6[2].position = sf::Vector2f(340.f, 120.f);
-	block6[3].position = sf::Vector2f(300.f, 150.f);
-	block6[4].position = sf::Vector2f(365.f, 150.f);
-	block6[5].position = sf::Vector2f(315.f, 180.f);
-	block6[6].position = sf::Vector2f(395.f, 150.f);
-	block6[7].position = sf::Vector2f(410.f, 180.f);
-
-	block6[0].texCoords = sf::Vector2f(260.f, 120.f);
-	block6[1].texCoords = sf::Vector2f(240.f, 150.f);
-	block6[2].texCoords = sf::Vector2f(340.f, 120.f);
-	block6[3].texCoords = sf::Vector2f(300.f, 150.f);
-	block6[4].texCoords = sf::Vector2f(365.f, 150.f);
-	block6[5].texCoords = sf::Vector2f(315.f, 180.f);
-	block6[6].texCoords = sf::Vector2f(395.f, 150.f);
-	block6[7].texCoords = sf::Vector2f(410.f, 180.f);
-
-	rec1.setPosition(30, 740);
-	rec1.setTexture(&tg2);
-
 	/* Doors */
 	// Water door
-	wdoor.loadFromFile(RESOURCES + "images/water_door1.PNG");
+	wdoor.loadFromFile(RESOURCES + "images/water door1.PNG");
 	swdoor.setTexture(wdoor);
 	swdoor.setTextureRect(IntRect(waterdoor, 1, 110, 125));
-	swdoor.setPosition(1050, 90);
+	swdoor.setPosition(1050, 50);
 	swdoor.scale(0.75, 0.75);
 	// Fire door
-	fdoor.loadFromFile(RESOURCES + "images/fire_door1.PNG");
+	fdoor.loadFromFile(RESOURCES + "images/fire door1.PNG");
 	sfdoor.setTexture(fdoor);
 	sfdoor.setTextureRect(IntRect(firedoor, 1, 110, 125));
-	sfdoor.setPosition(1150, 90);
+	sfdoor.setPosition(1150, 50);
 	sfdoor.scale(0.75, 0.75);
 
 	return;
 }
+// Sets blocks for background
+void setup_blocks(Sprite blocks[]) {
+	//1
+	blocks[0].setPosition(35, 605);
+	blocks[0].setScale(1, 1);
 
-/* Handles background collisions */
+	blocks[1].setPosition(760, 520);
+	blocks[1].setScale(1, 1);
+	//2
+
+	blocks[3].setPosition(490, 640);
+	blocks[3].setScale(1, 1);
+
+	blocks[4].setPosition(175, 490);
+	blocks[4].setScale(1, 1);
+
+	blocks[5].setPosition(165, 345);
+	blocks[5].setScale(1, 1);
+
+	blocks[2].setPosition(504, 140);
+	blocks[2].setScale(1.5, 1);
+	//3
+	blocks[6].setPosition(1115, 753);
+	blocks[6].setScale(1.25, 0.75);
+
+	blocks[7].setPosition(35, 230);
+	blocks[7].setScale(1, 1);
+
+	blocks[8].setPosition(667, 250);
+	blocks[8].setScale(1.25, 0.75);
+	//4
+	blocks[9].setPosition(35, 740);
+	blocks[9].setScale(1, 1);
+	//5
+	blocks[10].setPosition(825, 345);
+	blocks[10].setScale(0.8, 1);
+
+}
+// Handles background collisions 
 void check_background_collisions(RenderWindow& window) {
 
 	return;
 }
-
-/* Sets up lakes */
+// Sets up lakes
 void setup_env_and_lakes(){
 	//rope:
 	RopeTexture.loadFromFile(RESOURCES+"images/rope.png");
@@ -505,46 +434,9 @@ void setup_env_and_lakes(){
 	box1.set_pos(606, 220);
 }
 
-/* Sets up the score and sound of the game*/
-void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/)
-{
-	// Texture of diamonds
-	R_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
-	B_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
+/* Collisions */
 
-	for (int i = 0; i < 4; ++i)
-	{
-		red_diamonds[i].setTexture(R_diamondTexture);
-red_diamonds[i].setScale(1, 1);
-red_diamonds[i].setPosition(500 - (110 * i), 710 - (i * 170));
-red_diamonds[i].setTextureRect(IntRect(136 * 8, 136 * 10, 136, 136));
-	}
-
-	for (int i = 0; i < 4; ++i)
-	{
-		blue_diamonds[i].setTexture(B_diamondTexture);
-		blue_diamonds[i].setScale(1, 1);
-		blue_diamonds[i].setPosition(1000 - (70 * i), 750 - (i * 170));
-		blue_diamonds[i].setTextureRect(IntRect(136 * 7, 136 * 10, 136, 136));
-	}
-
-	//Score
-	ScoreFont.loadFromFile(RESOURCES + "fonts/TrajanPro-Bold.otf");
-	ScoreBoard.setFont(ScoreFont);
-	ScoreBoard.setString("Score: " + to_string(Score));
-	ScoreBoard.setFillColor(Color(220, 220, 50, 255));
-	ScoreBoard.setPosition(30, 30);
-	ScoreBoard.setCharacterSize(35);
-	ScoreBoard.Bold;
-
-	//Music
-	music.openFromFile(RESOURCES + "sound/MenuMusic.ogg");
-	//music.play();
-
-	return;
-}
-
-/* TODO */
+// TO BE FINISHED 
 void deal_with_interactions() {
 
 	/* Get current objects bounds */
@@ -555,7 +447,11 @@ void deal_with_interactions() {
 	FloatRect button1_bounds = button1.button.getGlobalBounds();
 	FloatRect button2_bounds = button2.button.getGlobalBounds();
 	/*---------------------------*/
-
+	// Back ground
+	/*for (int i = 0; i < 11; ++i) {
+		handle_background_collisions(blocks[i]);
+	}*/
+	handle_background_collisions(blocks[0]);
 
 	/* Lakes interactions */
 	// Fireboy
@@ -593,7 +489,7 @@ void deal_with_interactions() {
 	}
 	/* Buttons interactions */
 
-	/* Handle Lever*/
+	/* Handle Lever/
 	if (Fireboy.getGlobalBounds().intersects(lever.Arm.getGlobalBounds())) {
 		if (lever.isOn) {
 			lever.turn_on();
@@ -601,128 +497,111 @@ void deal_with_interactions() {
 		else {
 			lever.turn_off();
 		}
-	}
+	}*/
 }
 
-/* Handle collisions */
-void handle_collisions() {
+// Handles background collisions
+template <typename T>
+void handle_background_collisions(T block) {
 	// Get Objects Bounds
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
-	//FloatRect elev1_bounds = elevator1.elevator.getGlobalBounds();
-	FloatRect rec_bounds = rec1.getGlobalBounds();
+	FloatRect block_bounds = block.getGlobalBounds();
 	// Cases: top / bottom / left / right
 	bool above = false, under = false, toleftof = false, torightof = false;
-	cout << rec_bounds.left << " " << rec_bounds.width;
+	above = (fireboy_bounds.left >= block_bounds)
 	/* Fireboy */
-	if(fireboy_bounds.intersects(rec_bounds)){
-		// Top
-		if (fireboy_bounds.top + fireboy_bounds.height-2 >= rec_bounds.top)
+	if (fireboy_bounds.intersects(block_bounds)) {
+		// Above
+		if (fireboy_bounds.top + fireboy_bounds.height >= block_bounds.top+1)
 		{
-			Fireboy.setPosition(fireboy_bounds.left, rec_bounds.top - fireboy_bounds.height);
+			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top - fireboy_bounds.height);
 		}
-		// Down
-		if (fireboy_bounds.top <= rec_bounds.top + rec_bounds.height)
+		// Under
+		if (fireboy_bounds.top <= block_bounds.top + block_bounds.height-1)
 		{
-			//fireboy_bounds.left = rec_bounds.left - fireboy_bounds.width;
-			Fireboy.setPosition(fireboy_bounds.left, rec_bounds.top);
+			//fireboy_bounds.left = block_bounds.left - fireboy_bounds.width;
+			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top + block_bounds.height);
 		}
-		// Left
-		if (fireboy_bounds.left + fireboy_bounds.width >= rec_bounds.left)
+		// To the Left of 
+		if (fireboy_bounds.left + fireboy_bounds.width >= block_bounds.left + 1)
 		{
-			//fireboy_bounds.left = rec_bounds.left - fireboy_bounds.width;
-			Fireboy.setPosition(fireboy_bounds.left, fireboy_bounds.top);
+			Fireboy.setPosition(block_bounds.left - fireboy_bounds.width, fireboy_bounds.top);
 		}
-		// Right
+		// To the Right of
+		if (fireboy_bounds.left <= block_bounds.left + block_bounds.width - 1)
+		{
+			Fireboy.setPosition(block_bounds.left + block_bounds.width, fireboy_bounds.top);
+		}
 	}
-	
+
 	/* Watergirl */
-	if (watergirl_bounds.intersects(rec_bounds)) {
-		// Top
-		if (watergirl_bounds.top + watergirl_bounds.height - 2 >= rec_bounds.top) {
-			Watergirl.setPosition(watergirl_bounds.left, rec_bounds.top - watergirl_bounds.height);
+	if (watergirl_bounds.intersects(block_bounds)) {
+		// Above
+		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1) {
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top - watergirl_bounds.height);
 		}
-		// Down
-		if (watergirl_bounds.top <= rec_bounds.top+rec_bounds.height)
+		// Under
+		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1)
 		{
-			watergirl_bounds.left = rec_bounds.left - watergirl_bounds.width;
-			Watergirl.setPosition(watergirl_bounds.left, rec_bounds.top);
+			cout << watergirl_bounds.left << '\n';
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top + block_bounds.height);
+			cout << watergirl_bounds.left;
 		}
-		// Left
-		if (watergirl_bounds.left + watergirl_bounds.width <= rec_bounds.left)
+		// To the Left of 
+		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1)
 		{
-			watergirl_bounds.left = rec_bounds.left - watergirl_bounds.width;
+			Watergirl.setPosition(block_bounds.left - watergirl_bounds.width, watergirl_bounds.top);
 		}
-		// Right
-		if (watergirl_bounds.left >= rec1.getPosition().x + rec_bounds.width)
+		// To the Right of
+		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1)
 		{
-			watergirl_bounds.left = rec1.getPosition().x + rec_bounds.width;
+			Watergirl.setPosition(block_bounds.left + block_bounds.width, watergirl_bounds.top);
 		}
 	}
 }
 
-/*This function draws all needed game stuff on game window (diamonds, characters, etc...*/
-void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
-	
-	/* Background */
-	window.draw(sbback);
-	window.draw(sback);
-	// Buttons
-	window.draw(button1.button);
-	window.draw(button2.button);
-	/* Map */
-	window.draw(f1, &tg);
-	window.draw(f2, &tg);
-	window.draw(f3, &tg);
-	window.draw(f4);
-	window.draw(rec1);
-	window.draw(g1, &tg);
-	window.draw(g2, &tg);
-	window.draw(g3, &tg);
-	window.draw(g4, &tg);
-	window.draw(block1, &tg);
-	window.draw(block2, &tg);
-	window.draw(block3, &tg);
-	window.draw(block4, &tg);
-	window.draw(block5);
-	window.draw(block6, &tg);
-	// Doors
-	window.draw(sfdoor);
-	window.draw(swdoor);
-	// Levers & Elevators & boxes
-	window.draw(lever.Arm);
-	window.draw(lever.Base);
-	window.draw(elevator1.elevator);
-	window.draw(elevator2.elevator);
-	window.draw(box1.box);
-	// characters
-	//window.draw(rect);
-	window.draw(Fireboy);
-	window.draw(Watergirl);
-	// Score
-	window.draw(ScoreBoard);
-	// environment
-	//window.draw(Rope);
-	//window.draw(Wire);
-	window.draw(WaterLake);
-	window.draw(FireLake);
-	// diamonds
+/* Score */
+
+// Sets up the score and sound of the game
+void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/)
+{
+	// Texture of diamonds
+	R_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
+	B_diamondTexture.loadFromFile(RESOURCES + "images/CharAssets.png");
+
 	for (int i = 0; i < 4; ++i)
 	{
-		window.draw(red_diamonds[i]);
-		window.draw(blue_diamonds[i]);
+		red_diamonds[i].setTexture(R_diamondTexture);
+		red_diamonds[i].setScale(1, 1);
+		red_diamonds[i].setPosition(500 - (110 * i), 710 - (i * 170));
+		red_diamonds[i].setTextureRect(IntRect(136 * 8, 136 * 10, 136, 136));
 	}
-	// Score
-	//ScoreSheet
-	if (GameState == "win") {
-		window.draw(GameEndWindow);
-		window.draw(ScoreSheet);
+
+	for (int i = 0; i < 4; ++i)
+	{
+		blue_diamonds[i].setTexture(B_diamondTexture);
+		blue_diamonds[i].setScale(1, 1);
+		blue_diamonds[i].setPosition(1000 - (70 * i), 750 - (i * 170));
+		blue_diamonds[i].setTextureRect(IntRect(136 * 7, 136 * 10, 136, 136));
 	}
-	
+
+	//Score
+	ScoreFont.loadFromFile(RESOURCES + "fonts/TrajanPro-Bold.otf");
+	ScoreBoard.setFont(ScoreFont);
+	ScoreBoard.setString("Score: " + to_string(Score));
+	ScoreBoard.setFillColor(Color(220, 220, 50, 255));
+	ScoreBoard.setPosition(30, 30);
+	ScoreBoard.setCharacterSize(35);
+	ScoreBoard.Bold;
+
+	//Music
+	music.openFromFile(RESOURCES + "sound/MenuMusic.ogg");
+	//music.play();
+
 	return;
 }
-
-/*Calculates the current score */
+/* Calculates the current score */
 void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard)
 {
 	//red diamonds
@@ -759,8 +638,7 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 		}
 	}
 }
-
-/*Show the scoresheet after reached the gates*/
+/* Show the scoresheet after reaching the gates*/
 void game_win_end()
 {
 	GameEndWindow_Texture.loadFromFile("resources/images/PopupAssets.png");
@@ -778,7 +656,29 @@ void game_win_end()
 	ScoreSheet.Bold;
 }
 
-/*Handles the movement and animation of the characters*/
+/* Characters */
+
+// Create the two characters 
+void create_characters() {
+	// for charachter fireboy
+
+	load_photo1.loadFromFile(RESOURCES + "sprites/fireboy_sprite.png");
+	Fireboy.setTexture(load_photo1);
+	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
+	Fireboy.setPosition(100, 100);
+	Fireboy.scale(1, 1);
+
+	// for charachter watergirl
+	load_photo2.loadFromFile(RESOURCES + "sprites/watergirl_sprite.png");
+	Watergirl.setTexture(load_photo2);
+	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
+	//(150, 100)
+	Watergirl.setPosition(380, 100);
+	Watergirl.scale(1, 1);
+	//
+	return;
+}
+// Handles the movement and animation of the characters
 int animate_func()
 {
 	// for making rectangle for jumping on it
@@ -866,4 +766,3 @@ int animate_func()
 	}
 	return 0;
 }
-

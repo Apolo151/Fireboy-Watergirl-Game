@@ -7,6 +7,7 @@ using namespace sf;
 const string RESOURCES = "resources/";
 
 const float ROTATE_ANGLE = 33.f;
+static int ground = 865;
 
 // This is struct for lever objects
 struct Lever {
@@ -54,6 +55,56 @@ struct Lever {
 	}
 };
 
+struct player {
+	Sprite sprite;
+	float currentframe;
+	float move_X, move_Y;
+	FloatRect rect;
+	bool onground;
+
+	void sp(Texture& player_Texture) {
+
+		sprite.setTexture(player_Texture);
+		sprite.scale(1, 1);
+		move_X = 0;
+		move_Y = 0;
+		currentframe = 0;
+	}
+
+	void update(float time, int row1, int row2) {
+		rect.left += move_X * time;
+		rect.top += move_Y * time;
+
+		if (!onground) {
+			move_Y = (0.5 * time);
+		}
+		onground = false;
+
+		if (rect.top > ground) {
+			rect.top = ground;
+			move_Y = 0;
+			onground = true;
+		}
+
+
+		currentframe += 20 * time;
+		if (currentframe > 6) {
+			currentframe -= 6;
+		}
+		//right
+		if (move_X > 0) {
+			sprite.setTextureRect(IntRect(row1, -22, 70, 100));
+
+		}
+		// left
+		if (move_X < 0) {
+			sprite.setTextureRect(IntRect(row2, 78, 70, 100));
+
+		}
+		sprite.setPosition(rect.left, rect.top);
+		move_X = 0;
+	}
+};
 
 struct Button {
 	Sprite button;
@@ -111,8 +162,6 @@ struct Elevator {
 };
 
 
-
-
 struct Diamond {
 	string color;
 	Texture diamondT;
@@ -142,53 +191,3 @@ struct Box {
 };
 
 
-struct player {
-	Sprite sprite;
-	float currentframe;
-	float move_X, move_Y;
-	FloatRect rect;
-	bool onground;
-
-	void sp(Texture& player_Texture) {
-
-		sprite.setTexture(player_Texture);
-		sprite.scale(1, 1);
-		move_X = 0;
-		move_Y = 0;
-		currentframe = 0;
-	}
-
-	void update(float time, int row1, int row2) {
-		rect.left += move_X * time;
-		rect.top += move_Y * time;
-
-		if (!onground) {
-			move_Y += (20 * time);
-		}
-		onground = false;
-
-		if (rect.top > ground) {
-			rect.top = ground;
-			move_Y = 0;
-			onground = true;
-		}
-
-
-		currentframe += 20 * time;
-		if (currentframe > 6) {
-			currentframe -= 6;
-		}
-		//right
-		if (move_X > 0) {
-			sprite.setTextureRect(IntRect(row1, -22, 70, 100));
-
-		}
-		// left
-		if (move_X < 0) {
-			sprite.setTextureRect(IntRect(row2, 78, 70, 100));
-
-		}
-		sprite.setPosition(rect.left, rect.top);
-		move_X = 0;
-	}
-};
