@@ -84,8 +84,8 @@ block5(sf::Vector2f(120.f, 105.f));
 
 // Game Objects
 Lever lever(false);
-Button button1(382, 472), button2(1000, 325);
-Elevator elevator1, elevator2;
+Elevator elevators[] = {Elevator(300, 500)};
+Button buttons[] = { Button(382, 470, &elevators[0]), Button(950, 328, &elevators[0]) };
 Box box1;
 const float SPEED = 200;
 float delta_time;
@@ -166,12 +166,13 @@ int main()
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
 							// character movement and animations function
-							//animate_func();
-							animate2(delta_time);
+							
 							// check for colliding with the background
 							check_background_collisions(PLAY);
 							// interactions with lakes, levers, buttons, etc...
 							deal_with_interactions();
+							//animate_func();
+							animate2(delta_time);
 							PLAY.clear();
 							draw_all(PLAY, red_diamonds, blue_diamonds);
 							//
@@ -236,9 +237,6 @@ int main()
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
 	/* Background */
 	window.draw(sback);
-	// Buttons
-	window.draw(button1.button);
-	window.draw(button2.button);
 	/* Map */
 	// background
 	window.clear();
@@ -247,6 +245,10 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(g2);
 	window.draw(g3);
 	window.draw(g4);
+	// Buttons
+	for (Button button : buttons) {
+		window.draw(button.button);
+	}
 	for (int i = 0; i < 11; i++)
 	{
 		window.draw(blocks[i]);
@@ -255,11 +257,10 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(sfdoor);
 	window.draw(swdoor);
 	// Levers & Elevators & boxes
-	window.draw(lever.Arm);
-	window.draw(lever.Base);
-	window.draw(elevator1.elevator);
-	window.draw(elevator2.elevator);
-	window.draw(box1.box);
+	//window.draw(lever.Arm);
+	//window.draw(lever.Base);
+	window.draw(elevators[0].elevator);
+	//window.draw(box1.box);
 	// characters
 	//window.draw(rect);
 	window.draw(Fireboy.sprite);
@@ -402,6 +403,7 @@ void setup_blocks(Sprite blocks[]) {
 	blocks[10].setScale(0.8, 1);
 
 }
+
 // Handles background collisions 
 void check_background_collisions(RenderWindow& window) {
 
@@ -409,33 +411,33 @@ void check_background_collisions(RenderWindow& window) {
 }
 // Sets up lakes
 void setup_env_and_lakes(){
-	//rope:
+	/*rope:
 	RopeTexture.loadFromFile(RESOURCES+"images/rope.png");
 	Rope.setTexture(RopeTexture);
 	Rope.setPosition(750, 340);
-	Rope.setScale(0.25, 0.25);
+	Rope.setScale(0.25, 0.25);*/
 	//firelake:
 	FireLakeTexture.loadFromFile(RESOURCES + "images/flake.png");
 	FireLake.setTexture(FireLakeTexture);
-	FireLake.setPosition(550, 350);
+	FireLake.setPosition(550, 860);
 	FireLake.setScale(0.7, 0.7);
 
-	//wirewire.png
+	/*wirewire.png
 	WireTexture.loadFromFile(RESOURCES + "images/wire.png");
 	Wire.setTexture(WireTexture);
 	Wire.setPosition(550, 550);
-	Wire.setScale(0.4, 0.4);
+	Wire.setScale(0.4, 0.4);*/
 	//waterlake
 	WaterLakeTexture.loadFromFile(RESOURCES + "images/wlake.png");
 	WaterLake.setTexture(WaterLakeTexture);
-	WaterLake.setPosition(750, 620);
-	WaterLake.setScale(0.6, 0.6);
+	WaterLake.setPosition(750, 860);
+	WaterLake.setScale(0.2, 0.4);
 
 	/* Levers */
 	// (260, 595, 306, 606)
-	lever.set_pos(220, 715, 260, 730, 33.f);
-	elevator1.set_pos(30, 500, 20, 100);
-	elevator2.set_pos(1103, 400, 1000, 200);
+	//lever.set_pos(220, 715, 260, 730, 33.f);
+	elevators[0].set_pos(1030, 400, 1000, 200);
+	elevators[0].setScale(1.6, 1.4);
 	/* Buttons */
 
 	/* Boxes*/
@@ -449,10 +451,6 @@ void deal_with_interactions() {
 	/* Get current objects bounds */
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
-	FloatRect elev1_bounds = elevator1.elevator.getGlobalBounds();
-	FloatRect elev2_bounds = elevator2.elevator.getGlobalBounds();
-	FloatRect button1_bounds = button1.button.getGlobalBounds();
-	FloatRect button2_bounds = button2.button.getGlobalBounds();
 	/*---------------------------*/
 	/*// Back ground*/
 	for (int i = 0; i < 11; ++i) {
@@ -486,18 +484,31 @@ void deal_with_interactions() {
 	}
 
 	/* Elevators interactions */
-	// Fireboy
-	if (fireboy_bounds.top + fireboy_bounds.height <= elev2_bounds.top) {
-
-	}
-	// Watergirl
-	if (watergirl_bounds.top + watergirl_bounds.height <= elev1_bounds.top) {
-
-	}
-	if (watergirl_bounds.top + watergirl_bounds.height <= elev2_bounds.top) {
-
-	}
+	handle_collisions(elevators[0]);
+	
 	/* Buttons interactions */
+	// Collisions
+	for (Button &button : buttons) {
+		FloatRect intersection;
+		if (fireboy_bounds.intersects(button.button.getGlobalBounds(), intersection)) {
+			if (intersection.width > intersection.height || intersection.width <= intersection.height) {
+				button.isOn = true;
+			}
+			else button.isOn = false;
+		}
+		else button.isOn = false;
+	}
+
+	// Working
+	for (Button &button : buttons) {
+		if (button.isOn)
+		{	
+			button.move_elev_down();
+		}
+		else{
+			button.move_elev_up();
+		}
+	}
 
 	/* Handle Lever/
 	if (Fireboy.getGlobalBounds().intersects(lever.Arm.getGlobalBounds())) {
@@ -517,7 +528,7 @@ void handle_collisions(T block) {
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
 	FloatRect block_bounds = block.getGlobalBounds();
-	// Cases: top / bottom / left / right
+	// Cases: Above / Under / To the left of / to the right of
 	
 	/* Fireboy */
 	// Rectangle to store intersection coordinates
@@ -549,55 +560,37 @@ void handle_collisions(T block) {
 			if (fireboy_bounds.left < block_bounds.left)
 			{
 				//Fireboy.move(-overlap.width, 0.0f);
-				Fireboy.velocity.x = 0.0f;
-				Fireboy.velocity.y += 981.0f * delta_time;
+				//Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.x = -overlap.width;
+				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 			else
 			{
 				//Fireboy.move(overlap.width, 0.0f);
-				Fireboy.velocity.x = 0.0f;
-				Fireboy.velocity.y += 981.0f * delta_time;
+				//Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.x = overlap.width;
+				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 		}
 		else
 		{	// from top of block
-			if (fireboy_bounds.top/* + (fireboy_bounds.height * 0.7) */ < block_bounds.top)
+			if (fireboy_bounds.top + (fireboy_bounds.height * 0.1)  < block_bounds.top)
 			{
-				Fireboy.move(0.0f, -overlap.height);
+				//Fireboy.move(0.0f, -overlap.height);
 				Fireboy.CanJump = true;
-				//Fireboy.velocity.y = -overlap.height;
+				//Fireboy.velocity.y+= -overlap.height;
 				Fireboy.velocity.y = 0;
 				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 			// from bottom
 			else
 			{
-				Fireboy.move(0.0f, overlap.height);
-				//Fireboy.velocity.y = overlap.height;
-				Fireboy.velocity.y = 981.0f * delta_time;
+				//Fireboy.move(0.0f, overlap.height);
+				Fireboy.velocity.y = overlap.height;
+				Fireboy.velocity.y += 981.0f*0.6 * delta_time;
 			}
 		}
 	}
-	/*
-	if (fireboy_bounds.intersects(block_bounds)) {
-
-		// collide from left or right
-		if (Fireboy.velocity.x) {
-			Fireboy.velocity.x = 0.0f;
-			Fireboy.velocity.y += 981.0f * delta_time;
-		}
-		// collide from top
-		if (Fireboy.velocity.y > 0.0f) {
-			Fireboy.velocity.y = 0.0f;
-			Fireboy.CanJump = true;
-			//Fireboy.velocity.y += 981.0f * delta_time;
-		}
-		// collide from under
-		else if (Fireboy.velocity.y < 0.0f) {
-			Fireboy.velocity.y = 0.0f;
-			Fireboy.velocity.y += 981.0f * delta_time;
-		}
-	}*/
 	/* Watergirl */
 	if (watergirl_bounds.intersects(block_bounds)) {
 		// Above
@@ -729,11 +722,11 @@ void game_win_end()
 void create_characters() {
 	// for charachter fireboy
 	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
-	Fireboy.setPosition(100, 580);
+	Fireboy.setPosition(100, 640);
 	// for charachter watergirl
 	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
 	//(150, 100)
-	Watergirl.setPosition(200, 550);
+	Watergirl.setPosition(200, 750);
 	//
 	return;
 }
@@ -835,22 +828,63 @@ void animate2(float delta_time) {
 		Fireboy.CanJump = false;
 		Fireboy.jump();
 	}
-	else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-		Fireboy.moveRight(delta_time);
-		Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
+	if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+		// (row1_B, -22, 70, 100)
+		Fireboy.setTextureRect(IntRect(row1_B, -5, 70, 85));
 		row1_B += 80;
 		row1_B %= 320;
+		// if in window bounds
+		if (Fireboy.getPosition().x < 1175) {
+			Fireboy.moveRight(delta_time);
+		}
 	}
 	else if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
-		Fireboy.moveLeft(delta_time);
-		Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
+		// (row2_B, 78, 70, 100)
+		Fireboy.setTextureRect(IntRect(row2_B, 95, 70, 85));
 		row2_B += 80;
 		row2_B %= 320;
+		if (Fireboy.getPosition().x > 42) {
+			Fireboy.moveLeft(delta_time);
+		}
 	}
 	else {
-		Fireboy.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
+		// (StopRow_B, 400, 55, 100)
+		Fireboy.setTextureRect(IntRect(StopRow_B, 415, 55, 85));
 		StopRow_B += 80;
 		StopRow_B %= 400;
+	}
+
+	// Watergirl controls
+	if (Keyboard::isKeyPressed(Keyboard::Key::W) && Watergirl.CanJump) {
+		Watergirl.CanJump = false;
+		Watergirl.jump();
+	}
+	if (Keyboard::isKeyPressed(Keyboard::Key::A))
+	{
+		Watergirl.move(-10, 0);
+		Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
+		row1_G += 100;
+		row1_G %= 400;
+		if (Watergirl.getPosition().x > 35) {
+			Watergirl.moveLeft(delta_time);
+		}
+	}
+
+	else if (Keyboard::isKeyPressed(Keyboard::Key::D))
+	{
+		Watergirl.move(10, 0);
+		Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
+		row2_G += 100;
+		row2_G %= 400;
+		if (Watergirl.getPosition().x < 1175) {
+			Watergirl.moveRight(delta_time);
+		}
+	}
+	else
+	{
+		Watergirl.setTextureRect(IntRect(StopRow_G, 472, 56, 86));
+		StopRow_G += 80;
+		StopRow_G %= 320;
 	}
 
 	Fireboy.update(delta_time);
