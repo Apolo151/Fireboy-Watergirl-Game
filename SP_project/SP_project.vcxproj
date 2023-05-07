@@ -135,7 +135,7 @@
   <ItemGroup>
     <ClCompile Include="menu.cpp" />
     <ClCompile Include="source.cpp" />
-    <ClCompile Include="levers.cpp" />
+    <ClCompile Include="structs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="menu.h" />

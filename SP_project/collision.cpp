@@ -199,3 +199,78 @@ namespace Collision
 		return true;
 	}
 }
+
+
+///
+
+void handle_background_collisions(T block) {
+	// Get Objects Bounds
+	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
+	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
+	FloatRect block_bounds = block.getGlobalBounds();
+	// Cases: top / bottom / left / right
+
+	/* Fireboy */
+	// Rectangle to store intersection coordinates
+	if (fireboy_bounds.intersects(block_bounds)) {
+		sf::FloatRect intersection;
+		fireboy_bounds.intersects(block_bounds, intersection);
+
+		// Above
+		if (fireboy_bounds.top + fireboy_bounds.height >= block_bounds.top + 1 &&
+			intersection.height < intersection.width)
+		{
+			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top - fireboy_bounds.height);
+			Fireboy.CanJump = true;
+		}
+
+		// Under
+		else if (fireboy_bounds.top <= block_bounds.top + block_bounds.height - 1 &&
+			intersection.height < intersection.width)
+		{
+			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top + block_bounds.height);
+		}
+
+		// To the Left of 
+		else if (fireboy_bounds.left + fireboy_bounds.width >= block_bounds.left + 1 &&
+			intersection.height > intersection.width)
+		{
+			Fireboy.setPosition(block_bounds.left - fireboy_bounds.width, fireboy_bounds.top);
+		}
+
+		// To the Right of
+		else if (fireboy_bounds.left <= block_bounds.left + block_bounds.width - 1 &&
+			intersection.height > intersection.width)
+		{
+			Fireboy.setPosition(block_bounds.left + block_bounds.width, fireboy_bounds.top);
+		}
+	}
+	/* Watergirl */
+	if (watergirl_bounds.intersects(block_bounds)) {
+		// Above
+		FloatRect intersection;
+		watergirl_bounds.intersects(block_bounds, intersection);
+		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1 &&
+			intersection.width > intersection.height) {
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top - watergirl_bounds.height);
+		}
+		// Under
+		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1 &&
+			intersection.width > intersection.height)
+		{
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top + block_bounds.height);
+		}
+		// To the Left of 
+		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1 &&
+			intersection.width < intersection.height)
+		{
+			Watergirl.setPosition(block_bounds.left - watergirl_bounds.width, watergirl_bounds.top);
+		}
+		// To the Right of
+		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1 &&
+			intersection.width < intersection.height)
+		{
+			Watergirl.setPosition(block_bounds.left + block_bounds.width, watergirl_bounds.top);
+		}
+	}
+}

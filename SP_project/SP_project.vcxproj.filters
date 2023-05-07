@@ -21,7 +21,7 @@
     <ClCompile Include="source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="levers.cpp">
+    <ClCompile Include="structs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

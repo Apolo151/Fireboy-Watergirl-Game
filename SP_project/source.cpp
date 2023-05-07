@@ -4,7 +4,7 @@
 #include <fstream>
 #include<string>
 #include"Menu.h"
-#include "levers.cpp"
+#include "structs.cpp"
 
 using namespace std;
 using namespace sf;
@@ -21,15 +21,15 @@ void game_win_end();
 void setup_env_and_lakes();
 void deal_with_interactions();
 
-
 // Background
 void setup_blocks(Sprite blocks[]);
 void setup_background();
 void check_background_collisions(RenderWindow& window);
 template <typename T>
-void handle_background_collisions(T block);
+void handle_collisions(T block);
 // Character & Animation
 int animate_func();
+void animate2(float delta_time);
 void create_characters();
 
 /* Declare global variables*/
@@ -59,7 +59,8 @@ Texture Tb1, Tb2, Tb3, Tb4, Tb5;
 Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, 
 WaterLakeTexture, WireTexture, RopeTexture;
 Sprite LeverBase, LeverArm;
-Sprite Fireboy, Watergirl, FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
+//Sprite Fireboy, Watergirl;
+Sprite FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
 
 pair<int, int> WINDOW_DIMENSIONS = { 1280, 900 };
 /* Character Animation Sprite Sheet Cutting numbers*/
@@ -68,7 +69,10 @@ double jumpV_B = 0; bool isgrounded_B = false;
 int row1_G = 22, row2_G = 5, StopRow_G = 20;
 double jumpV_G = 0; bool isgrounded_G = false;
 
-/* Levers, Buttons, etc.. Sprite sheet cutting numbers*/
+bool FB_onground = false;
+bool WG_onground = false;
+
+/* Levers, Buttons, etc.. Sprite sheet cutting numbers */
 
 int Lever_row = 0, Button1_row, Button2_row;
 
@@ -78,12 +82,14 @@ rect(Vector2f(1500, 50)),
 f4(sf::Vector2f(845.f, 35.f)),
 block5(sf::Vector2f(120.f, 105.f));
 
-
 // Game Objects
 Lever lever(false);
 Button button1(382, 472), button2(1000, 325);
 Elevator elevator1, elevator2;
 Box box1;
+const float SPEED = 200;
+float delta_time;
+Player Fireboy("sprites/fireboy_sprite.png", SPEED), Watergirl("sprites/watergirl_sprite.png", SPEED);
 
 /*--------------------------*/
 
@@ -131,9 +137,10 @@ int main()
 				if (event.key.code == Keyboard::Enter)
 				{	
 					int x = menu.pressed();
+					sf::Clock clock;
 					// If Player Choose play
 					if (x == 0)
-					{
+					{	
 						Score = 0;
 						// Create Game window
 						RenderWindow PLAY(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Game");
@@ -151,24 +158,25 @@ int main()
 						game_win_end();
 						/*-------------------------------------------*/
 						while (PLAY.isOpen()) {
+							delta_time = clock.restart().asSeconds();
 							if (Keyboard::isKeyPressed(Keyboard::Key::F))
 							{
 								GameState = "win";
-								cout << "yo";
 							}
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
-							// interactions with lakes, levers, buttons, etc...
-							deal_with_interactions();
 							// character movement and animations function
-							animate_func();
+							//animate_func();
+							animate2(delta_time);
 							// check for colliding with the background
 							check_background_collisions(PLAY);
+							// interactions with lakes, levers, buttons, etc...
+							deal_with_interactions();
 							PLAY.clear();
 							draw_all(PLAY, red_diamonds, blue_diamonds);
 							//
-							Fireboy.move(0, -jumpV_B);
-							Watergirl.move(0, -jumpV_G);
+							//Fireboy.move(0, -jumpV_B);
+							//Watergirl.move(0, -jumpV_G);
 							//
 							PLAY.display();
 							Event aevent;
@@ -254,8 +262,8 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(box1.box);
 	// characters
 	//window.draw(rect);
-	window.draw(Fireboy);
-	window.draw(Watergirl);
+	window.draw(Fireboy.sprite);
+	window.draw(Watergirl.sprite);
 	// Score
 	window.draw(ScoreBoard);
 	// environment
@@ -438,7 +446,6 @@ void setup_env_and_lakes(){
 
 // TO BE FINISHED 
 void deal_with_interactions() {
-
 	/* Get current objects bounds */
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
@@ -447,11 +454,15 @@ void deal_with_interactions() {
 	FloatRect button1_bounds = button1.button.getGlobalBounds();
 	FloatRect button2_bounds = button2.button.getGlobalBounds();
 	/*---------------------------*/
-	// Back ground
-	/*for (int i = 0; i < 11; ++i) {
-		handle_background_collisions(blocks[i]);
-	}*/
-	handle_background_collisions(blocks[0]);
+	/*// Back ground*/
+	for (int i = 0; i < 11; ++i) {
+		handle_collisions(blocks[i]);
+	}
+	handle_collisions(g1);
+	handle_collisions(g2);
+	handle_collisions(g3);
+	handle_collisions(g4);
+	//handle_background_collisions(blocks[0]);
 
 	/* Lakes interactions */
 	// Fireboy
@@ -476,7 +487,6 @@ void deal_with_interactions() {
 
 	/* Elevators interactions */
 	// Fireboy
-
 	if (fireboy_bounds.top + fireboy_bounds.height <= elev2_bounds.top) {
 
 	}
@@ -502,59 +512,116 @@ void deal_with_interactions() {
 
 // Handles background collisions
 template <typename T>
-void handle_background_collisions(T block) {
+void handle_collisions(T block) {
 	// Get Objects Bounds
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
 	FloatRect block_bounds = block.getGlobalBounds();
 	// Cases: top / bottom / left / right
-	bool above = false, under = false, toleftof = false, torightof = false;
-	above = (fireboy_bounds.left >= block_bounds)
+	
 	/* Fireboy */
-	if (fireboy_bounds.intersects(block_bounds)) {
-		// Above
-		if (fireboy_bounds.top + fireboy_bounds.height >= block_bounds.top+1)
+	// Rectangle to store intersection coordinates
+
+	// Determine the overlap between the character and the rectangle
+	if(fireboy_bounds.intersects(block_bounds)){
+		// Determine the overlap between the character and the rectangle
+		sf::FloatRect overlap;
+		if (fireboy_bounds.top < block_bounds.top)
 		{
-			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top - fireboy_bounds.height);
+			overlap.top = fireboy_bounds.top + fireboy_bounds.height - block_bounds.top;
 		}
-		// Under
-		if (fireboy_bounds.top <= block_bounds.top + block_bounds.height-1)
+		else
 		{
-			//fireboy_bounds.left = block_bounds.left - fireboy_bounds.width;
-			Fireboy.setPosition(fireboy_bounds.left, block_bounds.top + block_bounds.height);
+			overlap.top = block_bounds.top + block_bounds.height - fireboy_bounds.top;
 		}
-		// To the Left of 
-		if (fireboy_bounds.left + fireboy_bounds.width >= block_bounds.left + 1)
+		if (fireboy_bounds.left < block_bounds.left)
 		{
-			Fireboy.setPosition(block_bounds.left - fireboy_bounds.width, fireboy_bounds.top);
+			overlap.left = fireboy_bounds.left + fireboy_bounds.width - block_bounds.left;
 		}
-		// To the Right of
-		if (fireboy_bounds.left <= block_bounds.left + block_bounds.width - 1)
+		else
 		{
-			Fireboy.setPosition(block_bounds.left + block_bounds.width, fireboy_bounds.top);
+			overlap.left = block_bounds.left + block_bounds.width - fireboy_bounds.left;
+		}
+
+		// Resolve the collision based on the overlap direction
+		if (overlap.width < overlap.height)
+		{
+			if (fireboy_bounds.left < block_bounds.left)
+			{
+				//Fireboy.move(-overlap.width, 0.0f);
+				Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.y += 981.0f * delta_time;
+			}
+			else
+			{
+				//Fireboy.move(overlap.width, 0.0f);
+				Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.y += 981.0f * delta_time;
+			}
+		}
+		else
+		{	// from top of block
+			if (fireboy_bounds.top/* + (fireboy_bounds.height * 0.7) */ < block_bounds.top)
+			{
+				Fireboy.move(0.0f, -overlap.height);
+				Fireboy.CanJump = true;
+				//Fireboy.velocity.y = -overlap.height;
+				Fireboy.velocity.y = 0;
+				//Fireboy.velocity.y += 981.0f * delta_time;
+			}
+			// from bottom
+			else
+			{
+				Fireboy.move(0.0f, overlap.height);
+				//Fireboy.velocity.y = overlap.height;
+				Fireboy.velocity.y = 981.0f * delta_time;
+			}
 		}
 	}
+	/*
+	if (fireboy_bounds.intersects(block_bounds)) {
 
+		// collide from left or right
+		if (Fireboy.velocity.x) {
+			Fireboy.velocity.x = 0.0f;
+			Fireboy.velocity.y += 981.0f * delta_time;
+		}
+		// collide from top
+		if (Fireboy.velocity.y > 0.0f) {
+			Fireboy.velocity.y = 0.0f;
+			Fireboy.CanJump = true;
+			//Fireboy.velocity.y += 981.0f * delta_time;
+		}
+		// collide from under
+		else if (Fireboy.velocity.y < 0.0f) {
+			Fireboy.velocity.y = 0.0f;
+			Fireboy.velocity.y += 981.0f * delta_time;
+		}
+	}*/
 	/* Watergirl */
 	if (watergirl_bounds.intersects(block_bounds)) {
 		// Above
-		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1) {
+		FloatRect intersection;
+		watergirl_bounds.intersects(block_bounds, intersection);
+		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1 && 
+			intersection.width > intersection.height) {
 			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top - watergirl_bounds.height);
 		}
 		// Under
-		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1)
-		{
-			cout << watergirl_bounds.left << '\n';
+		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1 &&
+			intersection.width > intersection.height)
+		{	
 			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top + block_bounds.height);
-			cout << watergirl_bounds.left;
 		}
 		// To the Left of 
-		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1)
+		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1 &&
+			intersection.width < intersection.height)
 		{
 			Watergirl.setPosition(block_bounds.left - watergirl_bounds.width, watergirl_bounds.top);
 		}
 		// To the Right of
-		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1)
+		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1 &&
+			intersection.width < intersection.height)
 		{
 			Watergirl.setPosition(block_bounds.left + block_bounds.width, watergirl_bounds.top);
 		}
@@ -661,20 +728,12 @@ void game_win_end()
 // Create the two characters 
 void create_characters() {
 	// for charachter fireboy
-
-	load_photo1.loadFromFile(RESOURCES + "sprites/fireboy_sprite.png");
-	Fireboy.setTexture(load_photo1);
 	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
-	Fireboy.setPosition(100, 100);
-	Fireboy.scale(1, 1);
-
+	Fireboy.setPosition(100, 580);
 	// for charachter watergirl
-	load_photo2.loadFromFile(RESOURCES + "sprites/watergirl_sprite.png");
-	Watergirl.setTexture(load_photo2);
 	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
 	//(150, 100)
-	Watergirl.setPosition(380, 100);
-	Watergirl.scale(1, 1);
+	Watergirl.setPosition(200, 550);
 	//
 	return;
 }
@@ -682,7 +741,7 @@ void create_characters() {
 int animate_func()
 {
 	// for making rectangle for jumping on it
-	rect.setPosition(0, 750);
+	//rect.setPosition(0, 750);
 
 	// fireboy controls :
 	if (Keyboard::isKeyPressed(Keyboard::Key::Right) && Fireboy.getPosition().x < 1245)
@@ -765,4 +824,34 @@ int animate_func()
 		jumpV_G -= 1.5;
 	}
 	return 0;
+}
+
+void animate2(float delta_time) {
+	// reset velocity at start of each frame
+	Fireboy.velocity.x = 0.0f;
+	Watergirl.velocity.x = 0.0f;
+
+	if (Keyboard::isKeyPressed(Keyboard::Key::Up) && Fireboy.CanJump){
+		Fireboy.CanJump = false;
+		Fireboy.jump();
+	}
+	else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+		Fireboy.moveRight(delta_time);
+		Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
+		row1_B += 80;
+		row1_B %= 320;
+	}
+	else if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
+		Fireboy.moveLeft(delta_time);
+		Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
+		row2_B += 80;
+		row2_B %= 320;
+	}
+	else {
+		Fireboy.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
+		StopRow_B += 80;
+		StopRow_B %= 400;
+	}
+
+	Fireboy.update(delta_time);
 }

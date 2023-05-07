@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <iostream>
 using namespace std;
 using namespace sf;
 
@@ -54,6 +55,66 @@ struct Lever {
 		else isOn = false;
 	}
 };
+
+struct Player {
+	sf::Sprite sprite;
+	sf::Vector2f velocity;
+	sf::Texture characterT;
+	float speed=300; // speed of moving right or left
+	bool CanJump = true;
+	float jump_height = 200;
+
+	Player(string TextureFile, float speed) {
+		characterT.loadFromFile(RESOURCES + TextureFile);
+		sprite.setTexture(characterT);
+		sprite.setScale(1, 1);
+		this->speed = speed;
+	}
+
+	void jump() {
+		velocity.y = -sqrtf(2.0f * jump_height * 981.0f);
+	}
+
+	void moveLeft(float delta_time) {
+		velocity.x = -speed;//-speed*1e5;
+	}
+
+	void moveRight(float delta_time) {
+		velocity.x = speed; // speed * 1e5;
+	}
+
+	void update(float delta_time) {
+		sprite.move(velocity * delta_time);
+		cout << velocity.y << " " << (velocity.x*delta_time) << '\n';
+		velocity.y += 981.0f * delta_time*10;
+	}
+
+	FloatRect getGlobalBounds() {
+		return sprite.getGlobalBounds();
+	}
+
+	void setScale(int x, int y) {
+		sprite.setScale(x, y);
+	}
+
+	void move(float x, float y) {
+		sprite.move(x, y);
+	}
+
+	Vector2f getPosition() {
+		return sprite.getPosition();
+	}
+
+	void setPosition(int x, int y) {
+		return sprite.setPosition(x, y);
+	}
+
+	void setTextureRect(IntRect rec) {
+		sprite.setTextureRect(rec);
+	}
+
+};
+
 
 struct player {
 	Sprite sprite;
