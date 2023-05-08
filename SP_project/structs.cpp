@@ -178,14 +178,14 @@ struct Button {
 
 	void move_elev_up() {
 		if (elev_pnt->getGlobalBounds().top > elev_pnt->mx_height) {
-			elev_pnt->elevator.move(0, -5);
+			elev_pnt->elevator.move(0, -2);
 		}
 		
 	}
 
 	void move_elev_down() {
 		if (elev_pnt->getGlobalBounds().top+elev_pnt->getGlobalBounds().height < elev_pnt->mn_height) {
-			elev_pnt->elevator.move(0, 7);
+			elev_pnt->elevator.move(0, 3);
 		}
 	}
 };

@@ -26,7 +26,7 @@ void setup_blocks(Sprite blocks[]);
 void setup_background();
 void check_background_collisions(RenderWindow& window);
 template <typename T>
-void handle_collisions(T block);
+void handle_character_collisions(T block, Player &Character);
 // Character & Animation
 int animate_func();
 void animate2(float delta_time);
@@ -420,7 +420,7 @@ void setup_env_and_lakes(){
 	FireLakeTexture.loadFromFile(RESOURCES + "images/flake.png");
 	FireLake.setTexture(FireLakeTexture);
 	FireLake.setPosition(550, 860);
-	FireLake.setScale(0.7, 0.7);
+	FireLake.setScale(0.2, 0.4);
 
 	/*wirewire.png
 	WireTexture.loadFromFile(RESOURCES + "images/wire.png");
@@ -454,13 +454,19 @@ void deal_with_interactions() {
 	/*---------------------------*/
 	/*// Back ground*/
 	for (int i = 0; i < 11; ++i) {
-		handle_collisions(blocks[i]);
+		handle_character_collisions(blocks[i], Fireboy);
+		handle_character_collisions(blocks[i], Watergirl);
 	}
-	handle_collisions(g1);
-	handle_collisions(g2);
-	handle_collisions(g3);
-	handle_collisions(g4);
-	//handle_background_collisions(blocks[0]);
+	//
+	handle_character_collisions(g1, Fireboy);
+	handle_character_collisions(g2, Fireboy);
+	handle_character_collisions(g3, Fireboy);
+	handle_character_collisions(g4, Fireboy);
+	//
+	handle_character_collisions(g1, Watergirl);
+	handle_character_collisions(g2, Watergirl);
+	handle_character_collisions(g3, Watergirl);
+	handle_character_collisions(g4, Watergirl);
 
 	/* Lakes interactions */
 	// Fireboy
@@ -469,29 +475,25 @@ void deal_with_interactions() {
 		Fireboy.setScale(0, 0);
 		GameState = "lose";
 	}
-	if (Fireboy.getGlobalBounds().intersects(Rope.getGlobalBounds()))
-	{
-		z = true;
-	}
 	// Water girl
 	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()))
 	{
 		Watergirl.setScale(0, 0);
 	}
-	if (Watergirl.getGlobalBounds().intersects(Rope.getGlobalBounds()) && z)
-	{
-		Watergirl.setScale(0, 0);
-	}
 
 	/* Elevators interactions */
-	handle_collisions(elevators[0]);
-	
+	for (Elevator elev : elevators) {
+		handle_character_collisions(elev, Fireboy);
+		handle_character_collisions(elev, Watergirl);
+	}
+
 	/* Buttons interactions */
 	// Collisions
 	for (Button &button : buttons) {
 		FloatRect intersection;
-		if (fireboy_bounds.intersects(button.button.getGlobalBounds(), intersection)) {
-			if (intersection.width > intersection.height || intersection.width <= intersection.height) {
+		if (fireboy_bounds.intersects(button.button.getGlobalBounds(), intersection) ||
+			watergirl_bounds.intersects(button.button.getGlobalBounds(), intersection)) {
+			if (intersection.width > intersection.height) {
 				button.isOn = true;
 			}
 			else button.isOn = false;
@@ -509,114 +511,74 @@ void deal_with_interactions() {
 			button.move_elev_up();
 		}
 	}
-
-	/* Handle Lever/
-	if (Fireboy.getGlobalBounds().intersects(lever.Arm.getGlobalBounds())) {
-		if (lever.isOn) {
-			lever.turn_on();
-		}
-		else {
-			lever.turn_off();
-		}
-	}*/
 }
 
 // Handles background collisions
 template <typename T>
-void handle_collisions(T block) {
-	// Get Objects Bounds
-	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
-	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
+void handle_character_collisions(T block, Player &Character) {
+	// Get character & block bounds
+	FloatRect char_bounds = Character.getGlobalBounds();
 	FloatRect block_bounds = block.getGlobalBounds();
 	// Cases: Above / Under / To the left of / to the right of
-	
-	/* Fireboy */
-	// Rectangle to store intersection coordinates
 
-	// Determine the overlap between the character and the rectangle
-	if(fireboy_bounds.intersects(block_bounds)){
+	// Determine the overlap between the character and the block
+	if(char_bounds.intersects(block_bounds)){
 		// Determine the overlap between the character and the rectangle
 		sf::FloatRect overlap;
-		if (fireboy_bounds.top < block_bounds.top)
+		if (char_bounds.top < block_bounds.top)
 		{
-			overlap.top = fireboy_bounds.top + fireboy_bounds.height - block_bounds.top;
+			overlap.top = char_bounds.top + char_bounds.height - block_bounds.top;
 		}
 		else
 		{
-			overlap.top = block_bounds.top + block_bounds.height - fireboy_bounds.top;
+			overlap.top = block_bounds.top + block_bounds.height - char_bounds.top;
 		}
-		if (fireboy_bounds.left < block_bounds.left)
+		if (char_bounds.left < block_bounds.left)
 		{
-			overlap.left = fireboy_bounds.left + fireboy_bounds.width - block_bounds.left;
+			overlap.left = char_bounds.left + char_bounds.width - block_bounds.left;
 		}
 		else
 		{
-			overlap.left = block_bounds.left + block_bounds.width - fireboy_bounds.left;
+			overlap.left = block_bounds.left + block_bounds.width - char_bounds.left;
 		}
 
 		// Resolve the collision based on the overlap direction
 		if (overlap.width < overlap.height)
 		{
-			if (fireboy_bounds.left < block_bounds.left)
+			if (char_bounds.left < block_bounds.left)
 			{
 				//Fireboy.move(-overlap.width, 0.0f);
 				//Fireboy.velocity.x = 0.0f;
-				Fireboy.velocity.x = -overlap.width;
+				//Character.velocity.x = -overlap.width;
+				Character.velocity.x = -10;
 				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 			else
 			{
 				//Fireboy.move(overlap.width, 0.0f);
 				//Fireboy.velocity.x = 0.0f;
-				Fireboy.velocity.x = overlap.width;
+				//Character.velocity.x = overlap.width;
+				Character.velocity.x = 10;
 				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 		}
 		else
 		{	// from top of block
-			if (fireboy_bounds.top + (fireboy_bounds.height * 0.1)  < block_bounds.top)
+			if (char_bounds.top + (char_bounds.height * 0.1)  < block_bounds.top)
 			{
 				//Fireboy.move(0.0f, -overlap.height);
-				Fireboy.CanJump = true;
+				Character.CanJump = true;
 				//Fireboy.velocity.y+= -overlap.height;
-				Fireboy.velocity.y = 0;
+				Character.velocity.y = 0;
 				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
 			// from bottom
 			else
 			{
 				//Fireboy.move(0.0f, overlap.height);
-				Fireboy.velocity.y = overlap.height;
-				Fireboy.velocity.y += 981.0f*0.6 * delta_time;
+				Character.velocity.y = overlap.height;
+				Character.velocity.y += 981.0f*0.6 * delta_time;
 			}
-		}
-	}
-	/* Watergirl */
-	if (watergirl_bounds.intersects(block_bounds)) {
-		// Above
-		FloatRect intersection;
-		watergirl_bounds.intersects(block_bounds, intersection);
-		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1 && 
-			intersection.width > intersection.height) {
-			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top - watergirl_bounds.height);
-		}
-		// Under
-		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1 &&
-			intersection.width > intersection.height)
-		{	
-			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top + block_bounds.height);
-		}
-		// To the Left of 
-		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1 &&
-			intersection.width < intersection.height)
-		{
-			Watergirl.setPosition(block_bounds.left - watergirl_bounds.width, watergirl_bounds.top);
-		}
-		// To the Right of
-		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1 &&
-			intersection.width < intersection.height)
-		{
-			Watergirl.setPosition(block_bounds.left + block_bounds.width, watergirl_bounds.top);
 		}
 	}
 }
@@ -722,11 +684,11 @@ void game_win_end()
 void create_characters() {
 	// for charachter fireboy
 	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
-	Fireboy.setPosition(100, 640);
+	Fireboy.setPosition(100, 630);
 	// for charachter watergirl
 	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
 	//(150, 100)
-	Watergirl.setPosition(200, 750);
+	Watergirl.setPosition(200, 630);
 	//
 	return;
 }
@@ -824,6 +786,7 @@ void animate2(float delta_time) {
 	Fireboy.velocity.x = 0.0f;
 	Watergirl.velocity.x = 0.0f;
 
+	// Fireboy control & animation
 	if (Keyboard::isKeyPressed(Keyboard::Key::Up) && Fireboy.CanJump){
 		Fireboy.CanJump = false;
 		Fireboy.jump();
@@ -854,14 +817,13 @@ void animate2(float delta_time) {
 		StopRow_B %= 400;
 	}
 
-	// Watergirl controls
+	// Watergirl control & animation
 	if (Keyboard::isKeyPressed(Keyboard::Key::W) && Watergirl.CanJump) {
 		Watergirl.CanJump = false;
 		Watergirl.jump();
 	}
 	if (Keyboard::isKeyPressed(Keyboard::Key::A))
 	{
-		Watergirl.move(-10, 0);
 		Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
 		row1_G += 100;
 		row1_G %= 400;
@@ -872,7 +834,6 @@ void animate2(float delta_time) {
 
 	else if (Keyboard::isKeyPressed(Keyboard::Key::D))
 	{
-		Watergirl.move(10, 0);
 		Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
 		row2_G += 100;
 		row2_G %= 400;
@@ -886,6 +847,7 @@ void animate2(float delta_time) {
 		StopRow_G += 80;
 		StopRow_G %= 320;
 	}
-
+	//
 	Fireboy.update(delta_time);
+	Watergirl.update(delta_time);
 }
