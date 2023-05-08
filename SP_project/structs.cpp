@@ -60,7 +60,7 @@ struct Player {
 	sf::Sprite sprite;
 	sf::Vector2f velocity;
 	sf::Texture characterT;
-	float speed=300; // speed of moving right or left
+	float speed; // speed of moving right or left
 	bool CanJump = true;
 	float jump_height = 170;
 
@@ -73,26 +73,26 @@ struct Player {
 
 	void jump() {
 		velocity.y = -sqrtf(2.0f * jump_height * 981.0f*0.5);
+		//velocity.y = -speed;
 	}
 
 	void moveLeft(float delta_time) {
-		velocity.x = -speed;//-speed*1e5;
+		velocity.x = -speed; // saves the movement in velocity
 	}
 
 	void moveRight(float delta_time) {
-		velocity.x = speed; // speed * 1e5;
+		velocity.x = speed;
 	}
 
 	void update(float delta_time) {
+		/* Updates the character position according to velocity */
 		sprite.move(velocity * delta_time);
-		//cout << velocity.y << " " << (velocity.x*delta_time) << '\n';
 		if (sprite.getGlobalBounds().top + sprite.getGlobalBounds().height < 870) {
 			velocity.y += 981.0f*0.6 * delta_time;
 		}
 		else {
 			velocity.y = 0.0f;
 		}
-		
 	}
 
 	FloatRect getGlobalBounds() {

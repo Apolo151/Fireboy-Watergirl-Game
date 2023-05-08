@@ -4,13 +4,14 @@
 #include <fstream>
 #include<string>
 #include"Menu.h"
+#include "Menu1.h"
 #include "structs.cpp"
 
 using namespace std;
 using namespace sf;
 
 //const string RESOURCES = "resources/";
-bool z = false;
+bool z = false; int e1 = 0;
 /* Write functions declarations */
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]);
 // Score
@@ -39,7 +40,7 @@ Font ScoreFont;
 Text ScoreBoard;
 Text ScoreSheet;
 int Score = 0, waterdoor = 3, firedoor = 3;
-int HighestScore;
+int HighestScore=0;
 //
 Texture GameEndWindow_Texture;	//Texture when game end
 Sprite GameEndWindow;	//sprite for game end
@@ -47,6 +48,7 @@ String GameState = "running";	//State variable to check if game ended or not ("w
 fstream Highest;	//file for save the highest score
 // Music
 Music music;
+bool MusicOn = true;
 
 // Background
 Texture tg1, tg2, wdoor, fdoor, tback;
@@ -56,11 +58,11 @@ g3(sf::Vector2f(35.f, 1280.f)), g4(sf::Vector2f(1280.f, 35.f));
 Sprite blocks[11];
 Texture Tb1, Tb2, Tb3, Tb4, Tb5;
 // Env
-Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, 
-WaterLakeTexture, WireTexture, RopeTexture;
+Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture,
+WaterLakeTexture, WireTexture, RopeTexture, txg, t2, tx2;
 Sprite LeverBase, LeverArm;
 //Sprite Fireboy, Watergirl;
-Sprite FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
+Sprite FireLake, WaterLake, GreenLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
 
 pair<int, int> WINDOW_DIMENSIONS = { 1280, 900 };
 /* Character Animation Sprite Sheet Cutting numbers*/
@@ -99,19 +101,25 @@ int main()
 	//make a main menu window (old (950, 750))
 	RenderWindow window(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Fireboy & watergirl", Style::Default);
 	Menu menu(window.getSize().x, window.getSize().y);
+
 	//set background for main menu
 	RectangleShape backg;
 	backg.setSize(Vector2f(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second));
 	Texture Maintexture;
-	Maintexture.loadFromFile(RESOURCES+"images/menu_image.jpg");
+	Maintexture.loadFromFile(RESOURCES + "images/bgr.jpg");
 	backg.setTexture(&Maintexture);
+	//setting background for settings
+	RectangleShape sbackg;
+	sbackg.setSize(Vector2f(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second));
+	Texture sMaintexture;
+	sMaintexture.loadFromFile(RESOURCES + "images/tem.jpg");
+	sbackg.setTexture(&sMaintexture);
 	//
 	//Taking the value of highest score at the bigening of the game
 	Highest.open("ScoreSheet.txt", ios::in | ios::out);
 	Highest >> HighestScore;
 	Highest.close();
 
-	
 	while (window.isOpen())
 	{
 		Event event;
@@ -155,22 +163,21 @@ int main()
 						create_characters();
 						// Setup the background
 						setup_background();
+						// check if game ended or not
 						game_win_end();
 						/*-------------------------------------------*/
 						while (PLAY.isOpen()) {
 							delta_time = clock.restart().asSeconds();
+							//
 							if (Keyboard::isKeyPressed(Keyboard::Key::F))
 							{
 								GameState = "win";
 							}
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
-							// character movement and animations function
-							
-							// check for colliding with the background
-							check_background_collisions(PLAY);
 							// interactions with lakes, levers, buttons, etc...
 							deal_with_interactions();
+							// character movement and animations function
 							//animate_func();
 							animate2(delta_time);
 							PLAY.clear();
@@ -203,6 +210,7 @@ int main()
 					if (x == 1)
 					{
 						RenderWindow SETTINGS(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Settings");
+						Menu1 menu1(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second);
 						while (SETTINGS.isOpen())
 						{
 							Event aevent;
@@ -212,9 +220,45 @@ int main()
 								{
 									SETTINGS.close();
 								}
+								else if (aevent.type == Event::KeyPressed)
+								{
+									if (aevent.key.code == Keyboard::Escape)
+									{
+										SETTINGS.close();
+									}
+								}
+								if (aevent.type == Event::KeyPressed)
+								{
+									if (aevent.key.code == Keyboard::Up)
+									{
+										menu1.MoveUp1();
+
+									}
+									if (aevent.key.code == Keyboard::Down)
+									{
+										menu1.MoveDown1();
+
+									}
+
+									if (aevent.key.code == Keyboard::Enter)
+									{
+										int x1 = menu1.pressed1();
+										if (x1 == 1)
+										{
+											MusicOn = true;
+											SETTINGS.close();
+										}
+										if (x1 == 2)
+										{
+											MusicOn = false;
+											SETTINGS.close();
+										}
+									}
+								}
 							}
-							//PLAY.close();
 							SETTINGS.clear();
+							SETTINGS.draw(sbackg);
+							menu1.draw1(SETTINGS);
 							SETTINGS.display();
 						}
 					}
@@ -411,42 +455,47 @@ void check_background_collisions(RenderWindow& window) {
 }
 // Sets up lakes
 void setup_env_and_lakes(){
-	/*rope:
-	RopeTexture.loadFromFile(RESOURCES+"images/rope.png");
-	Rope.setTexture(RopeTexture);
-	Rope.setPosition(750, 340);
-	Rope.setScale(0.25, 0.25);*/
-	//firelake:
-	FireLakeTexture.loadFromFile(RESOURCES + "images/flake.png");
+	// FireLake
+	/*FireLakeTexture.loadFromFile(RESOURCES + "images/flake.png");
 	FireLake.setTexture(FireLakeTexture);
 	FireLake.setPosition(550, 860);
-	FireLake.setScale(0.2, 0.4);
+	FireLake.setScale(0.2, 0.4);*/
+	tx2.loadFromFile(RESOURCES + "images/lakef3.png");
+	FireLake.setTexture(tx2);
+	FireLake.setTextureRect(IntRect(52.46, 0, 52.46, 68));
+	FireLake.setPosition(400, 675);
+	FireLake.setScale(1, 1);
 
-	/*wirewire.png
-	WireTexture.loadFromFile(RESOURCES + "images/wire.png");
-	Wire.setTexture(WireTexture);
-	Wire.setPosition(550, 550);
-	Wire.setScale(0.4, 0.4);*/
-	//waterlake
-	WaterLakeTexture.loadFromFile(RESOURCES + "images/wlake.png");
+	//  WaterLake
+	/*WaterLakeTexture.loadFromFile(RESOURCES + "images/wlake.png");
 	WaterLake.setTexture(WaterLakeTexture);
 	WaterLake.setPosition(750, 860);
-	WaterLake.setScale(0.2, 0.4);
+	WaterLake.setScale(0.2, 0.4);*/
 
-	/* Levers */
-	// (260, 595, 306, 606)
-	//lever.set_pos(220, 715, 260, 730, 33.f);
+	t2.loadFromFile(RESOURCES + "images/w12.png");
+	WaterLake.setTexture(t2);
+	WaterLake.setPosition(750, 677);
+	WaterLake.setTextureRect(IntRect(0, 0, 156.67, 28));
+	WaterLake.setScale(1, 1);
+
+	txg.loadFromFile("glake.png");
+	GreenLake.setTexture(txg);
+	GreenLake.setTextureRect(IntRect(0, 0, 166, 71));
+	GreenLake.setPosition(750, 488);
+	GreenLake.setScale(1, 1);
+
+	/* Elevators */
 	elevators[0].set_pos(1030, 400, 1000, 200);
 	elevators[0].setScale(1.6, 1.4);
 	/* Buttons */
 
 	/* Boxes*/
-	box1.set_pos(606, 220);
+	//box1.set_pos(606, 220);
 }
 
 /* Collisions */
 
-// TO BE FINISHED 
+// TO BE FINISHED
 void deal_with_interactions() {
 	/* Get current objects bounds */
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
@@ -479,6 +528,7 @@ void deal_with_interactions() {
 	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()))
 	{
 		Watergirl.setScale(0, 0);
+		GameState = "lose";
 	}
 
 	/* Elevators interactions */
@@ -511,6 +561,12 @@ void deal_with_interactions() {
 			button.move_elev_up();
 		}
 	}
+	//
+	
+	z++;
+	e1++;
+	e1 %= 3;
+	z %= 5;
 }
 
 // Handles background collisions
@@ -619,7 +675,7 @@ void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text&
 
 	//Music
 	music.openFromFile(RESOURCES + "sound/MenuMusic.ogg");
-	//music.play();
+	if(MusicOn) music.play();
 
 	return;
 }
@@ -780,7 +836,7 @@ int animate_func()
 	}
 	return 0;
 }
-
+// 
 void animate2(float delta_time) {
 	// reset velocity at start of each frame
 	Fireboy.velocity.x = 0.0f;

@@ -134,11 +134,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="menu.cpp" />
+    <ClCompile Include="Menu1.cpp" />
     <ClCompile Include="source.cpp" />
     <ClCompile Include="structs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="menu.h" />
+    <ClInclude Include="Menu1.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\images\background1.png" />

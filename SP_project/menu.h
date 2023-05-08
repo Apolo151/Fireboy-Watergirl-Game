@@ -15,11 +15,15 @@ public:
 		return selected;
 	}
 	~Menu();
-	
-
 private:
 	int selected;
 	Font font;
+
+
+
+
+
+
 };
 
 
