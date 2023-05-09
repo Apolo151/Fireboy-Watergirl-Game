@@ -6,55 +6,7 @@ using namespace std;
 using namespace sf;
 
 const string RESOURCES = "resources/";
-
-const float ROTATE_ANGLE = 33.f;
 static int ground = 865;
-
-// This is struct for lever objects
-struct Lever {
-	// checks if lever is on or off
-	bool isOn=false;
-	// 0 off, 1 on, 2 rotating
-	// 
-	// Defines lever Base and Arm
-	Sprite Base, Arm;
-	Texture LeverT;
-	
-	// Constructor
-	Lever(bool isOn) : isOn(isOn) {
-		LeverT.loadFromFile(RESOURCES + "images/lever_assets.png");
-		this->Base.setTexture(LeverT);
-		this->Arm.setTexture(LeverT);
-		// set scales (found these scales to be suitable)
-		this->Base.setTextureRect(IntRect(0, 45, 120, 80));
-		this->Arm.setTextureRect(IntRect(382, 3, 22, 63));
-		this->Base.setScale(0.8, 0.8);
-		this->Arm.setScale(0.9, 0.9);
-	}
-
-	void set_pos(int baseX, int baseY, int armX, int armY, float rot) {
-		this->Base.setPosition(baseX, baseY);
-		this->Arm.setPosition(armX, armY);
-		//
-		this->Arm.setOrigin(11.f, 60.f);
-		this->Arm.setRotation(rot);
-	}
-
-	// the lever is rotated left if off, right elsewise
-	void turn_on() {
-		if (this->Arm.getRotation() > -ROTATE_ANGLE) {
-			this->Arm.rotate(-1);
-		}
-		else isOn = true;
-	}
-
-	void turn_off() {
-		if (this->Arm.getRotation() < ROTATE_ANGLE) {
-			this->Arm.rotate(1);
-		}
-		else isOn = false;
-	}
-};
 
 struct Player {
 	sf::Sprite sprite;
@@ -67,26 +19,27 @@ struct Player {
 	Player(string TextureFile, float speed) {
 		characterT.loadFromFile(RESOURCES + TextureFile);
 		sprite.setTexture(characterT);
-		sprite.setScale(0.9, 0.9);
+		sprite.setScale(0.85, 0.85);
 		this->speed = speed;
 	}
 
 	void jump() {
 		velocity.y = -sqrtf(2.0f * jump_height * 981.0f*0.5);
-		//velocity.y = -speed;
+		//OR just : velocity.y = -speed;
 	}
 
-	void moveLeft(float delta_time) {
-		velocity.x = -speed; // saves the movement in velocity
+	void moveLeft() {
+		velocity.x += -speed; // saves the movement in velocity
 	}
 
-	void moveRight(float delta_time) {
-		velocity.x = speed;
+	void moveRight() {
+		velocity.x += speed; // saves the movement in velocity
 	}
 
 	void update(float delta_time) {
 		/* Updates the character position according to velocity */
 		sprite.move(velocity * delta_time);
+		// Add Gravity
 		if (sprite.getGlobalBounds().top + sprite.getGlobalBounds().height < 870) {
 			velocity.y += 981.0f*0.6 * delta_time;
 		}
@@ -100,7 +53,7 @@ struct Player {
 	}
 
 	void setScale(int x, int y) {
-		sprite.setScale(x, y);
+		this->sprite.setScale(x, y);
 	}
 
 	void move(float x, float y) {
@@ -166,6 +119,8 @@ struct Button {
 	Texture buttonT;
 	bool isOn = false;
 	Elevator* elev_pnt;
+	int initY;
+
 
 	Button(int X, int Y, Elevator* elev) {
 		buttonT.loadFromFile(RESOURCES + "images/buttons_assets.png");
@@ -174,7 +129,9 @@ struct Button {
 		button.setScale(0.8, 0.8);
 		button.setPosition(X, Y);
 		this->elev_pnt = elev;
+		initY = Y;
 	}
+
 
 	void move_elev_up() {
 		if (elev_pnt->getGlobalBounds().top > elev_pnt->mx_height) {
@@ -188,35 +145,11 @@ struct Button {
 			elev_pnt->elevator.move(0, 3);
 		}
 	}
-};
 
-
-struct Diamond {
-	string color;
-	Texture diamondT;
-	Sprite diamond;
-
-	Diamond(string color) {
-		if (color == "red") {
-			diamondT.loadFromFile(RESOURCES + "images/diamonds.png");
-		}
+	FloatRect getGlobalBounds() {
+		return button.getGlobalBounds();
 	}
 };
 
-struct Box {
-	Texture BoxT;
-	Sprite box;
-
-	Box() {
-		BoxT.loadFromFile(RESOURCES + "images/lever&box_assets.png");
-		box.setTexture(BoxT);
-		box.setTextureRect(IntRect(666, 5, 67, 66));
-		box.setScale(0.8, 0.8);
-	}
-
-	void set_pos(int X, int Y) {
-		box.setPosition(X, Y);
-	}
-};
 
 

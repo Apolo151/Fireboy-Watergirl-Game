@@ -11,7 +11,7 @@ Menu1::Menu1(float width, float height) {
 	mainmenu1[0].setFillColor(Color{ 250,200,80 });
 	mainmenu1[0].setString("Game audio");
 	mainmenu1[0].setCharacterSize(70);
-	mainmenu1[0].setPosition(Vector2f(width / 3.5, height /5));
+	mainmenu1[0].setPosition(Vector2f(width / 3.5 + 60, height /5 - 10));
 
 	mainmenu1[1].setFont(font1);
 	mainmenu1[1].setFillColor(Color{ 250,200,80 });

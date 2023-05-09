@@ -4,46 +4,46 @@
 #include <fstream>
 #include<string>
 #include"Menu.h"
-#include "Menu1.h"
 #include "structs.cpp"
 
 using namespace std;
 using namespace sf;
 
 //const string RESOURCES = "resources/";
-int z =0, e1 = 0;
+bool z = false;
 /* Write functions declarations */
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]);
 // Score
 void score(Sprite Red[], Sprite Blue[], int& Sc, Text& Scboard);
 void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text& ScoreBoard,*/);
 void game_win_end();
-void game_lose_end(RenderWindow& play);/*||||Function of lose||||*/
-void setup_end_window();
+void game_lose_end(RenderWindow &play);/*||||Function of lose||||*/
 // Env
-void setup_env();
+void setup_env_and_lakes();
 void deal_with_interactions();
 
 // Background
 void setup_blocks(Sprite blocks[]);
 void setup_background();
+void check_background_collisions(RenderWindow& window);
 template <typename T>
-void handle_character_collisions(T block, Player &Character);
+void handle_collisions(T block);
 // Character & Animation
 int animate_func();
 void animate2(float delta_time);
 void create_characters();
-// Sound
+/*||||SoundEffects||||*/
 void Sound_effects();
 
 /* Declare global variables*/
 
 // Score
 Font ScoreFont;
-Text ScoreBoard, ScoreSheet;
-Text GameOver;
+Text ScoreBoard;
+Text ScoreSheet;
+Text GameOver;/*||||text to show the text of lose*/
 int Score = 0, waterdoor = 3, firedoor = 3;
-int HighestScore=0;
+int HighestScore;
 //
 Texture GameEndWindow_Texture;	//Texture when game end
 Sprite GameEndWindow;	//sprite for game end
@@ -51,13 +51,12 @@ String GameState = "running";	//State variable to check if game ended or not ("w
 fstream Highest;	//file for save the highest score
 // Music
 Music LevelMusic;
-bool MusicOn = false;
 /*||||Sound buffers||||*/
-SoundBuffer DiamondBuffer;
+SoundBuffer DaimondBuffer;
 SoundBuffer DeathBuffer;
 SoundBuffer DoorBuffer;
 /*||||Sound Effects||||*/
-Sound DiamondSound;
+Sound DaimondSound;
 Sound DeathSound;
 Sound DoorSound;
 
@@ -66,14 +65,14 @@ Texture tg1, tg2, wdoor, fdoor, tback;
 Sprite swdoor, sfdoor, sback;
 sf::RectangleShape g1(sf::Vector2f(35.f, 1280.f)), g2(sf::Vector2f(1280.f, 35.f)),
 g3(sf::Vector2f(35.f, 1280.f)), g4(sf::Vector2f(1280.f, 35.f));
-Sprite blocks[12]; // background blocks
+Sprite blocks[11];
 Texture Tb1, Tb2, Tb3, Tb4, Tb5;
 // Env
-Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture,
-WaterLakeTexture, WireTexture, RopeTexture, txg, t2, tx2;
+Texture load_photo1, load_photo2, R_diamondTexture, B_diamondTexture, FireLakeTexture, 
+WaterLakeTexture, WireTexture, RopeTexture;
 Sprite LeverBase, LeverArm;
 //Sprite Fireboy, Watergirl;
-Sprite FireLake, WaterLake, GreenLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
+Sprite FireLake, WaterLake, Wire, Rope;// , red_diamonds[4], blue_diamonds[4];
 
 pair<int, int> WINDOW_DIMENSIONS = { 1280, 900 };
 /* Character Animation Sprite Sheet Cutting numbers*/
@@ -96,9 +95,11 @@ f4(sf::Vector2f(845.f, 35.f)),
 block5(sf::Vector2f(120.f, 105.f));
 
 // Game Objects
-Elevator elevators[] = {Elevator(350, 505)};
-Button buttons[] = { Button(382, 470, &elevators[0]), Button(950, 328, &elevators[0]) };
-const float SPEED = 200; // the speed of the moving of characters
+Lever lever(false);
+Button button1(382, 472), button2(1000, 325);
+Elevator elevator1, elevator2;
+Box box1;
+const float SPEED = 200;
 float delta_time;
 Player Fireboy("sprites/fireboy_sprite.png", SPEED), Watergirl("sprites/watergirl_sprite.png", SPEED);
 
@@ -114,20 +115,15 @@ int main()
 	RectangleShape backg;
 	backg.setSize(Vector2f(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second));
 	Texture Maintexture;
-	Maintexture.loadFromFile(RESOURCES + "images/bgr.jpg");
+	Maintexture.loadFromFile(RESOURCES+"images/menu_image.jpg");
 	backg.setTexture(&Maintexture);
-	//setting background for settings
-	RectangleShape sbackg;
-	sbackg.setSize(Vector2f(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second));
-	Texture sMaintexture;
-	sMaintexture.loadFromFile(RESOURCES + "images/tem.jpg");
-	sbackg.setTexture(&sMaintexture);
 	//
 	//Taking the value of highest score at the bigening of the game
 	Highest.open("ScoreSheet.txt", ios::in | ios::out);
 	Highest >> HighestScore;
 	Highest.close();
-
+	//
+	
 	while (window.isOpen())
 	{
 		Event event;
@@ -168,15 +164,13 @@ int main()
 						/*||||Setup Sounds||||*/
 						Sound_effects();
 						// setup ENV
-						setup_env();
+						setup_env_and_lakes();
 						// Setup Characters texture
 						create_characters();
 						// Setup the background
 						setup_background();
-						// setup game end window
-						setup_end_window();
-						Fireboy.sprite.setScale(0.85, 0.85);
-						Watergirl.sprite.setScale(0.85, 0.85);
+						
+						game_win_end();
 						/*-------------------------------------------*/
 						while (PLAY.isOpen()) {
 							delta_time = clock.restart().asSeconds();
@@ -184,26 +178,28 @@ int main()
 							{
 								GameState = "win";
 							}
-							if (Fireboy.getGlobalBounds().intersects(sfdoor.getGlobalBounds())
-								&& Watergirl.getGlobalBounds().intersects(swdoor.getGlobalBounds()))
+							else if (Keyboard::isKeyPressed(Keyboard::Key::L))
 							{
-								GameState = "win";
-								DoorSound.play();
-							}
-							// check game state
-							if (GameState == "win") {
-								game_win_end();
-							}
-							else if (GameState == "lose") {
-								game_lose_end(PLAY);
+								GameState = "lose";
 							}
 							// calcuate score
 							score(red_diamonds, blue_diamonds, Score, ScoreBoard);
 							// character movement and animations function
+							//animate_func();
 							animate2(delta_time);
+							// check for colliding with the background
+							check_background_collisions(PLAY);
+							// interactions with lakes, levers, buttons, etc...
+							deal_with_interactions();
+							/*||||Game lose||||*/
+							game_lose_end(PLAY);
 							PLAY.clear();
-							// Draw all objects
 							draw_all(PLAY, red_diamonds, blue_diamonds);
+							//
+							
+							//Fireboy.move(0, -jumpV_B);
+							//Watergirl.move(0, -jumpV_G);
+							//
 							PLAY.display();
 							Event aevent;
 							while (PLAY.pollEvent(aevent))
@@ -211,8 +207,6 @@ int main()
 								if (aevent.type == Event::Closed)
 								{
 									LevelMusic.stop();
-									// reset game state
-									GameState = "running";
 									PLAY.close();
 								}
 								if (aevent.type == Event::KeyPressed)
@@ -220,8 +214,7 @@ int main()
 									if (aevent.key.code == Keyboard::Escape)
 									{	
 										LevelMusic.stop();
-										// reset game state
-										GameState = "running";
+										GameState = "lose";
 										PLAY.close();
 									}
 								}
@@ -231,7 +224,6 @@ int main()
 					if (x == 1)
 					{
 						RenderWindow SETTINGS(VideoMode(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second), "Settings");
-						Menu1 menu1(WINDOW_DIMENSIONS.first, WINDOW_DIMENSIONS.second);
 						while (SETTINGS.isOpen())
 						{
 							Event aevent;
@@ -241,45 +233,9 @@ int main()
 								{
 									SETTINGS.close();
 								}
-								else if (aevent.type == Event::KeyPressed)
-								{
-									if (aevent.key.code == Keyboard::Escape)
-									{
-										SETTINGS.close();
-									}
-								}
-								if (aevent.type == Event::KeyPressed)
-								{
-									if (aevent.key.code == Keyboard::Up)
-									{
-										menu1.MoveUp1();
-
-									}
-									if (aevent.key.code == Keyboard::Down)
-									{
-										menu1.MoveDown1();
-
-									}
-
-									if (aevent.key.code == Keyboard::Enter)
-									{
-										int x1 = menu1.pressed1();
-										if (x1 == 1)
-										{
-											MusicOn = true;
-											SETTINGS.close();
-										}
-										if (x1 == 2)
-										{
-											MusicOn = false;
-											SETTINGS.close();
-										}
-									}
-								}
 							}
+							//PLAY.close();
 							SETTINGS.clear();
-							SETTINGS.draw(sbackg);
-							menu1.draw1(SETTINGS);
 							SETTINGS.display();
 						}
 					}
@@ -287,7 +243,7 @@ int main()
 
 						window.close();
 					break;
-
+					
 				}
 			}
 		}
@@ -302,6 +258,9 @@ int main()
 void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[]) {
 	/* Background */
 	window.draw(sback);
+	// Buttons
+	window.draw(button1.button);
+	window.draw(button2.button);
 	/* Map */
 	// background
 	window.clear();
@@ -310,33 +269,31 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 	window.draw(g2);
 	window.draw(g3);
 	window.draw(g4);
-	// Buttons
-	for (Button button : buttons) {
-		window.draw(button.button);
-	}
-	/*for (Sprite& block : blocks)
-	{
-		window.draw(block);
-	}*/
-	for (int i=0; i< 12; i++)
+	for (int i = 0; i < 11; i++)
 	{
 		window.draw(blocks[i]);
 	}
 	// Doors
 	window.draw(sfdoor);
 	window.draw(swdoor);
-	// Elevators
-	window.draw(elevators[0].elevator);
-	// Characters
+	// Levers & Elevators & boxes
+	window.draw(lever.Arm);
+	window.draw(lever.Base);
+	window.draw(elevator1.elevator);
+	window.draw(elevator2.elevator);
+	window.draw(box1.box);
+	// characters
+	//window.draw(rect);
 	window.draw(Fireboy.sprite);
 	window.draw(Watergirl.sprite);
 	// Score
 	window.draw(ScoreBoard);
-	// Environment
+	// environment
+	//window.draw(Rope);
+	//window.draw(Wire);
 	window.draw(WaterLake);
 	window.draw(FireLake);
-	window.draw(GreenLake);
-	// Diamonds
+	// diamonds
 	for (int i = 0; i < 4; ++i)
 	{
 		window.draw(red_diamonds[i]);
@@ -348,7 +305,9 @@ void draw_all(RenderWindow& window, Sprite red_diamonds[], Sprite blue_diamonds[
 		window.draw(GameEndWindow);
 		window.draw(ScoreSheet);
 	}
-	else if (GameState == "lose") {
+	/*||||When game lose||||*/
+	if (GameState == "lose")
+	{
 		window.draw(GameEndWindow);
 		window.draw(GameOver);
 	}
@@ -400,12 +359,12 @@ void setup_background() {
 	Tb5.setRepeated(true);
 	//
 	setup_blocks(blocks);
-	for (int i = 0; i < 12; i++)
+	for (int i = 0; i < 11; i++)
 	{
 		if (i == 0 || i == 1) {
 			blocks[i].setTexture(Tb1);
 		}
-		else if (i == 2 || i == 3 || i == 4 || i == 5 || i == 11)
+		else if (i == 2 || i == 3 || i == 4 || i == 5)
 			blocks[i].setTexture(Tb2);
 
 		else if (i == 6 || i == 7 || i == 8)
@@ -454,9 +413,6 @@ void setup_blocks(Sprite blocks[]) {
 
 	blocks[2].setPosition(504, 140);
 	blocks[2].setScale(1.5, 1);
-
-	blocks[11].setPosition(350, 220);
-	blocks[11].setScale(0.1, 1);
 	//3
 	blocks[6].setPosition(1115, 753);
 	blocks[6].setScale(1.25, 0.75);
@@ -474,192 +430,228 @@ void setup_blocks(Sprite blocks[]) {
 	blocks[10].setScale(0.8, 1);
 
 }
-// Handles button animation
+// Handles background collisions 
+void check_background_collisions(RenderWindow& window) {
 
-// Sets up ENV
-void setup_env(){
-	// FireLake
-	tx2.loadFromFile(RESOURCES + "images/lakef3.png");
-	FireLake.setTexture(tx2);
-	FireLake.setTextureRect(IntRect(52.46, 0, 52.46, 68));
-	FireLake.setPosition(600, 854);
-	FireLake.setScale(0.72, 0.9);
-	//  WaterLake
-	t2.loadFromFile(RESOURCES + "images/w12.png");
-	WaterLake.setTexture(t2);
-	WaterLake.setTextureRect(IntRect(0, 0, 156.67, 28));
-	WaterLake.setPosition(800, 855);
-	WaterLake.setScale(0.8, 0.9);
-	// GreenLake
-	txg.loadFromFile(RESOURCES + "images/glake.png");
-	GreenLake.setTexture(txg);
-	GreenLake.setTextureRect(IntRect(0, 0, 166, 71));
-	GreenLake.setPosition(335, 330);
-	GreenLake.setScale(0.8, 0.9);
+	return;
+}
+// Sets up lakes
+void setup_env_and_lakes(){
+	//rope:
+	RopeTexture.loadFromFile(RESOURCES+"images/rope.png");
+	Rope.setTexture(RopeTexture);
+	Rope.setPosition(750, 340);
+	Rope.setScale(0.25, 0.25);
+	//firelake:
+	FireLakeTexture.loadFromFile(RESOURCES + "images/flake.png");
+	FireLake.setTexture(FireLakeTexture);
+	FireLake.setPosition(550, 350);
+	FireLake.setScale(0.7, 0.7);
 
-	/* Elevators */
-	elevators[0].set_pos(1030, 400, 1000, 200);
-	elevators[0].setScale(1.6, 1.4);
+	//wirewire.png
+	WireTexture.loadFromFile(RESOURCES + "images/wire.png");
+	Wire.setTexture(WireTexture);
+	Wire.setPosition(550, 550);
+	Wire.setScale(0.4, 0.4);
+	//waterlake
+	WaterLakeTexture.loadFromFile(RESOURCES + "images/wlake.png");
+	WaterLake.setTexture(WaterLakeTexture);
+	WaterLake.setPosition(750, 620);
+	WaterLake.setScale(0.6, 0.6);
+
+	/* Levers */
+	// (260, 595, 306, 606)
+	lever.set_pos(220, 715, 260, 730, 33.f);
+	elevator1.set_pos(30, 500, 20, 100);
+	elevator2.set_pos(1103, 400, 1000, 200);
 	/* Buttons */
+
+	/* Boxes*/
+	box1.set_pos(606, 220);
 }
 
 /* Collisions */
 
-// interactions with lakes, levers, buttons, etc...
+// TO BE FINISHED 
 void deal_with_interactions() {
 	/* Get current objects bounds */
 	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
 	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
-	// Reset Colliding Status
+	FloatRect elev1_bounds = elevator1.elevator.getGlobalBounds();
+	FloatRect elev2_bounds = elevator2.elevator.getGlobalBounds();
+	FloatRect button1_bounds = button1.button.getGlobalBounds();
+	FloatRect button2_bounds = button2.button.getGlobalBounds();
 	/*---------------------------*/
 	/*// Back ground*/
-	for (Sprite &block : blocks) {
-		handle_character_collisions(block, Fireboy);
-		handle_character_collisions(block, Watergirl);
+	for (int i = 0; i < 11; ++i) {
+		handle_collisions(blocks[i]);
 	}
-	//
-	handle_character_collisions(g1, Fireboy);
-	handle_character_collisions(g2, Fireboy);
-	handle_character_collisions(g3, Fireboy);
-	handle_character_collisions(g4, Fireboy);
-	//
-	handle_character_collisions(g1, Watergirl);
-	handle_character_collisions(g2, Watergirl);
-	handle_character_collisions(g3, Watergirl);
-	handle_character_collisions(g4, Watergirl);
+	handle_collisions(g1);
+	handle_collisions(g2);
+	handle_collisions(g3);
+	handle_collisions(g4);
+	//handle_background_collisions(blocks[0]);
 
 	/* Lakes interactions */
 	// Fireboy
-	if (fireboy_bounds.intersects(WaterLake.getGlobalBounds()) || 
-		(fireboy_bounds.intersects(GreenLake.getGlobalBounds()) &&
-			fireboy_bounds.top < GreenLake.getGlobalBounds().top))
+	if (fireboy_bounds.intersects(WaterLake.getGlobalBounds()))
 	{
-		DeathSound.play();
 		Fireboy.setScale(0, 0);
+		DeathSound.play();////
 		GameState = "lose";
 	}
-	// Water girl
-	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()) ||
-		Watergirl.getGlobalBounds().intersects(GreenLake.getGlobalBounds()) &&
-		watergirl_bounds.top < GreenLake.getGlobalBounds().top)
+	if (Fireboy.getGlobalBounds().intersects(Rope.getGlobalBounds()))
 	{
-		DeathSound.play();
+		z = true;
+	}
+	// Water girl
+	if (Watergirl.getGlobalBounds().intersects(FireLake.getGlobalBounds()))
+	{
 		Watergirl.setScale(0, 0);
-		GameState = "lose";
+		DeathSound.play();////
+	}
+	if (Watergirl.getGlobalBounds().intersects(Rope.getGlobalBounds()) && z)
+	{
+		Watergirl.setScale(0, 0);
 	}
 
 	/* Elevators interactions */
-	for (Elevator elev : elevators) {
-		handle_character_collisions(elev, Fireboy);
-		handle_character_collisions(elev, Watergirl);
-	}
+	// Fireboy
+	if (fireboy_bounds.top + fireboy_bounds.height <= elev2_bounds.top) {
 
+	}
+	// Watergirl
+	if (watergirl_bounds.top + watergirl_bounds.height <= elev1_bounds.top) {
+
+	}
+	if (watergirl_bounds.top + watergirl_bounds.height <= elev2_bounds.top) {
+
+	}
 	/* Buttons interactions */
-	// Collisions
-	for (Button &button : buttons) {
-		FloatRect intersection;
-		if (fireboy_bounds.intersects(button.getGlobalBounds(), intersection) ||
-			watergirl_bounds.intersects(button.getGlobalBounds(), intersection)) {
-			if (intersection.width > intersection.height) {
-				button.isOn = true;
-				if (button.getGlobalBounds().top < button.initY + button.getGlobalBounds().height-4) {
-					button.button.move(0, 1);
-				}
-			}
-			else button.isOn = false;
+
+	/* Handle Lever/
+	if (Fireboy.getGlobalBounds().intersects(lever.Arm.getGlobalBounds())) {
+		if (lever.isOn) {
+			lever.turn_on();
 		}
 		else {
-			button.isOn = false;
-			if (button.getGlobalBounds().top > button.initY) {
-				button.button.move(0, -1);
-			}
+			lever.turn_off();
 		}
-	}
-	// Working
-	for (Button &button : buttons) {
-		if (button.isOn)
-		{	
-			button.move_elev_down();
-		}
-		else{
-			button.move_elev_up();
-		}
-	}
-	/* Lakes animation */
-	z++;
-	e1++;
-	e1 %= 3;
-	z %= 5;
-	FireLake.setTextureRect(IntRect(z * (512.0 / 3.0), 0, 512.0 / 3.0, 45));
-	GreenLake.setTextureRect(IntRect(z * 166, 0, 166, 71));
-	WaterLake.setTextureRect(IntRect(e1 * 156.67, 0, 156.67, 28));
+	}*/
 }
 
 // Handles background collisions
 template <typename T>
-void handle_character_collisions(T block, Player &Character) {
-	// Get character & block bounds
-	FloatRect char_bounds = Character.getGlobalBounds();
+void handle_collisions(T block) {
+	// Get Objects Bounds
+	FloatRect fireboy_bounds = Fireboy.getGlobalBounds();
+	FloatRect watergirl_bounds = Watergirl.getGlobalBounds();
 	FloatRect block_bounds = block.getGlobalBounds();
-	// Cases: Above / Under / To the left of / to the right of
+	// Cases: top / bottom / left / right
+	
+	/* Fireboy */
+	// Rectangle to store intersection coordinates
 
-	// Determine the overlap between the character and the block
-	if(char_bounds.intersects(block_bounds)){
+	// Determine the overlap between the character and the rectangle
+	if(fireboy_bounds.intersects(block_bounds)){
 		// Determine the overlap between the character and the rectangle
 		sf::FloatRect overlap;
-		if (char_bounds.top < block_bounds.top)
+		if (fireboy_bounds.top < block_bounds.top)
 		{
-			overlap.height = char_bounds.top + char_bounds.height - block_bounds.top;
+			overlap.top = fireboy_bounds.top + fireboy_bounds.height - block_bounds.top;
 		}
 		else
 		{
-			overlap.height = block_bounds.top + block_bounds.height - char_bounds.top;
+			overlap.top = block_bounds.top + block_bounds.height - fireboy_bounds.top;
 		}
-		if (char_bounds.left < block_bounds.left)
+		if (fireboy_bounds.left < block_bounds.left)
 		{
-			overlap.width = char_bounds.left + char_bounds.width - block_bounds.left;
+			overlap.left = fireboy_bounds.left + fireboy_bounds.width - block_bounds.left;
 		}
 		else
 		{
-			overlap.width = block_bounds.left + block_bounds.width - char_bounds.left;
+			overlap.left = block_bounds.left + block_bounds.width - fireboy_bounds.left;
 		}
 
 		// Resolve the collision based on the overlap direction
 		if (overlap.width < overlap.height)
 		{
-			if (char_bounds.left < block_bounds.left)
+			if (fireboy_bounds.left < block_bounds.left)
 			{
 				//Fireboy.move(-overlap.width, 0.0f);
-				//Fireboy.velocity.x = 0.0f;
-				//Character.velocity.x = -overlap.width;
-				Character.velocity.x += -SPEED;
-				//Fireboy.velocity.y += 981.0f * delta_time;
+				Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.y += 981.0f * delta_time*10;
 			}
 			else
 			{
-				//Fireboy.velocity.x = 0.0f;
-				//Character.velocity.x = overlap.width;
-				Character.velocity.x += SPEED;
-				//Fireboy.velocity.y += 981.0f * delta_time;
+				//Fireboy.move(overlap.width, 0.0f);
+				Fireboy.velocity.x = 0.0f;
+				Fireboy.velocity.y += 981.0f * delta_time*10;
 			}
 		}
 		else
-		{	// from top of block
-			if (char_bounds.top + (char_bounds.height * 0.1)  < block_bounds.top)
+		{
+			if (fireboy_bounds.top+(fireboy_bounds.height*0.5) < block_bounds.top)
 			{
 				//Fireboy.move(0.0f, -overlap.height);
-				Character.CanJump = true;
-				//Character.velocity.y = -overlap.height;
-				Character.velocity.y = 0;
+				Fireboy.CanJump = true;
+				Fireboy.velocity.y = 0.0f;
 				//Fireboy.velocity.y += 981.0f * delta_time;
 			}
-			// from bottom
 			else
 			{
 				//Fireboy.move(0.0f, overlap.height);
-				Character.velocity.y = overlap.height;
-				Character.velocity.y += 981.0f*0.6 * delta_time;
+				Fireboy.velocity.y = 0.0f;
+				Fireboy.velocity.y += 981.0f * delta_time*10;
 			}
+		}
+	}
+	/*
+	if (fireboy_bounds.intersects(block_bounds)) {
+
+		// collide from left or right
+		if (Fireboy.velocity.x) {
+			Fireboy.velocity.x = 0.0f;
+			Fireboy.velocity.y += 981.0f * delta_time;
+		}
+		// collide from top
+		if (Fireboy.velocity.y > 0.0f) {
+			Fireboy.velocity.y = 0.0f;
+			Fireboy.CanJump = true;
+			//Fireboy.velocity.y += 981.0f * delta_time;
+		}
+		// collide from under
+		else if (Fireboy.velocity.y < 0.0f) {
+			Fireboy.velocity.y = 0.0f;
+			Fireboy.velocity.y += 981.0f * delta_time;
+		}
+	}*/
+	/* Watergirl */
+	if (watergirl_bounds.intersects(block_bounds)) {
+		// Above
+		FloatRect intersection;
+		watergirl_bounds.intersects(block_bounds, intersection);
+		if (watergirl_bounds.top + watergirl_bounds.height >= block_bounds.top + 1 && 
+			intersection.width > intersection.height) {
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top - watergirl_bounds.height);
+		}
+		// Under
+		if (watergirl_bounds.top <= block_bounds.top + block_bounds.height - 1 &&
+			intersection.width > intersection.height)
+		{	
+			Watergirl.setPosition(watergirl_bounds.left, block_bounds.top + block_bounds.height);
+		}
+		// To the Left of 
+		if (watergirl_bounds.left + watergirl_bounds.width >= block_bounds.left + 1 &&
+			intersection.width < intersection.height)
+		{
+			Watergirl.setPosition(block_bounds.left - watergirl_bounds.width, watergirl_bounds.top);
+		}
+		// To the Right of
+		if (watergirl_bounds.left <= block_bounds.left + block_bounds.width - 1 &&
+			intersection.width < intersection.height)
+		{
+			Watergirl.setPosition(block_bounds.left + block_bounds.width, watergirl_bounds.top);
 		}
 	}
 }
@@ -699,9 +691,9 @@ void setup_score_and_sound(Sprite red_diamonds[], Sprite blue_diamonds[] /*Text&
 	ScoreBoard.Bold;
 
 	//Music
-	LevelMusic.openFromFile(RESOURCES + "sound/MenuMusic.ogg");
+	LevelMusic.openFromFile(RESOURCES + "sound/LevelMusic.ogg");
 	LevelMusic.setLoop(true);
-	if(MusicOn) LevelMusic.play();
+	LevelMusic.play();
 
 	return;
 }
@@ -713,9 +705,10 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 	{
 		if (Fireboy.getGlobalBounds().intersects(red_diamonds[i].getGlobalBounds()))
 		{
-			DiamondSound.play();
 			red_diamonds[i].setScale(0, 0);
+			DaimondSound.play();
 			++Sc;
+			DaimondSound.play();////
 			Scboard.setString("Score: " + to_string(Sc));
 			ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
 		}
@@ -725,9 +718,9 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 	{
 		if (Watergirl.getGlobalBounds().intersects(blue_diamonds[i].getGlobalBounds()))
 		{
-			DiamondSound.play();
 			blue_diamonds[i].setScale(0, 0);
 			++Sc;
+			DaimondSound.play();////
 			Scboard.setString("Score: " + to_string(Sc));
 			ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
 		}
@@ -743,83 +736,85 @@ void score(Sprite red_diamonds[], Sprite blue_diamonds[], int& Sc, Text& Scboard
 			Highest.close();
 		}
 	}
+	
 }
 /* Show the scoresheet after reaching the gates*/
-
-// Sets up the window that appears when the game ends
-void setup_end_window() {
-	// End window setup
+void game_win_end()
+{
 	GameEndWindow_Texture.loadFromFile("resources/images/PopupAssets.png");
+
 	GameEndWindow.setTexture(GameEndWindow_Texture);
 	GameEndWindow.setScale(0.75, 0.75);
 	GameEndWindow.setPosition(260, 180);
 	GameEndWindow.setTextureRect(IntRect(0, 225, 1060, 409 * 1.45));
 
-	// Win case setup
 	ScoreSheet.setFont(ScoreFont);
+	ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " + to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
 	ScoreSheet.setFillColor(Color(220, 220, 50, 255));
 	ScoreSheet.setPosition(420, 280);
 	ScoreSheet.setCharacterSize(35);
 	ScoreSheet.Bold;
 
-	// GameOver case setup
+}
+/*||||Show the window of lose||||*/
+void game_lose_end(RenderWindow& play)
+{
+	GameEndWindow_Texture.loadFromFile("resources/images/PopupAssets.png");
+
+	GameEndWindow.setTexture(GameEndWindow_Texture);
+	GameEndWindow.setScale(0.75, 0.75);
+	GameEndWindow.setPosition(260, 180);
+	GameEndWindow.setTextureRect(IntRect(0, 225, 1060, 409 * 1.45));
+
 	GameOver.setFont(ScoreFont);
+	GameOver.setString("        \tGAME OVER!   \t\n\n\n\nPress enter to play again...");
 	GameOver.setFillColor(Color(220, 220, 50, 255));
 	GameOver.setPosition(420, 280);
 	GameOver.setCharacterSize(35);
 	GameOver.Bold;
-	GameOver.setString("        \tGAME OVER!   \t\n\n\n\nPress enter to play again...");
-}
-void game_win_end()
-{
-	
-	ScoreSheet.setString("       \tYOU WIN!   \t\n\nYour Score:\t\t\t     " 
-		+ to_string(Score) + "\n\n" + "The highest score:\t" + to_string(HighestScore));
-}
-void game_lose_end(RenderWindow& play)
-{
+
 	if (GameState == "lose")
 	{
 		if (Keyboard::isKeyPressed(Keyboard::Key::Enter))
 		{
-			GameState = "running";
 			play.close();
-			
+			GameState = "running";
 		}
 	}
 }
-
+/*||||SoundEffects||||*/
 void Sound_effects()
 {
-	DiamondBuffer.loadFromFile("resources/sound/DiamondSound.ogg");
+	DaimondBuffer.loadFromFile("resources/sound/DiamondSound.ogg");
 	DeathBuffer.loadFromFile("resources/sound/audio_Death.ogg");
 	DoorBuffer.loadFromFile("resources/sound/audio_Door.ogg");
 
-	DiamondSound.setBuffer(DiamondBuffer);
+	DaimondSound.setBuffer(DaimondBuffer);
 	DeathSound.setBuffer(DeathBuffer);
 	DoorSound.setBuffer(DoorBuffer);
-
+	
 }
 
 /* Characters */
 
-// Create the two characters
+// Create the two characters 
 void create_characters() {
 	// for charachter fireboy
 	Fireboy.setTextureRect(IntRect(467, 277, 55, 100));
-	Fireboy.setPosition(100, 650);
-	//Fireboy.setScale(0.9, 0.9);
+	Fireboy.setPosition(100, 530);
 	// for charachter watergirl
 	Watergirl.setTextureRect(IntRect(340, 472, 56, 86));
-	//(150, 630)
-	Watergirl.setPosition(200, 650);
-	//Watergirl.setScale(0.9, 0.9);
+	//(150, 100)
+	Watergirl.setPosition(200, 600);
 	//
 	return;
 }
 // Handles the movement and animation of the characters
 int animate_func()
 {
+	// for making rectangle for jumping on it
+	//rect.setPosition(0, 750);
+
 	// fireboy controls :
 	if (Keyboard::isKeyPressed(Keyboard::Key::Right) && Fireboy.getPosition().x < 1245)
 	{
@@ -907,70 +902,28 @@ void animate2(float delta_time) {
 	// reset velocity at start of each frame
 	Fireboy.velocity.x = 0.0f;
 	Watergirl.velocity.x = 0.0f;
-	deal_with_interactions();
 
-	// Fireboy control & animation
 	if (Keyboard::isKeyPressed(Keyboard::Key::Up) && Fireboy.CanJump){
 		Fireboy.CanJump = false;
 		Fireboy.jump();
 	}
-	if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-		// (row1_B, -22, 70, 100)
-		Fireboy.setTextureRect(IntRect(row1_B, -5, 70, 85));
+	else if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+		Fireboy.moveRight(delta_time);
+		Fireboy.setTextureRect(IntRect(row1_B, -22, 70, 100));
 		row1_B += 80;
 		row1_B %= 320;
-		// if in window bounds
-		if (Fireboy.getPosition().x < 1175) {
-			Fireboy.moveRight();
-		}
 	}
 	else if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
-		// (row2_B, 78, 70, 100)
-		Fireboy.setTextureRect(IntRect(row2_B, 95, 70, 85));
+		Fireboy.moveLeft(delta_time);
+		Fireboy.setTextureRect(IntRect(row2_B, 78, 70, 100));
 		row2_B += 80;
 		row2_B %= 320;
-		if (Fireboy.getPosition().x > 42) {
-			Fireboy.moveLeft();
-		}
 	}
 	else {
-		// (StopRow_B, 400, 55, 100)
-		Fireboy.setTextureRect(IntRect(StopRow_B, 415, 55, 85));
+		Fireboy.setTextureRect(IntRect(StopRow_B, 400, 55, 100));
 		StopRow_B += 80;
 		StopRow_B %= 400;
 	}
 
-	// Watergirl control & animation
-	if (Keyboard::isKeyPressed(Keyboard::Key::W) && Watergirl.CanJump) {
-		Watergirl.CanJump = false;
-		Watergirl.jump();
-	}
-	if (Keyboard::isKeyPressed(Keyboard::Key::A))
-	{
-		Watergirl.setTextureRect(IntRect(row1_G, 18, 90, 80));
-		row1_G += 100;
-		row1_G %= 400;
-		if (Watergirl.getPosition().x > 35) {
-			Watergirl.moveLeft();
-		}
-	}
-
-	else if (Keyboard::isKeyPressed(Keyboard::Key::D))
-	{
-		Watergirl.setTextureRect(IntRect(row2_G, 118, 96, 80));
-		row2_G += 100;
-		row2_G %= 400;
-		if (Watergirl.getPosition().x < 1175) {
-			Watergirl.moveRight();
-		}
-	}
-	else
-	{
-		Watergirl.setTextureRect(IntRect(StopRow_G, 472, 56, 86));
-		StopRow_G += 80;
-		StopRow_G %= 320;
-	}
-	//
 	Fireboy.update(delta_time);
-	Watergirl.update(delta_time);
 }
